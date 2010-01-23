@@ -1,6 +1,9 @@
 % based on the PDF example from
 % http://www.adobe.com/technology/pdfs/presentations/KingPDFTutorial.pdf
 
+0 0 100 100 .gbox
+1 0 0 -1 0 100 cm
+
 q
 0 0 1 rg
 4 0 0 4 50 50 cm

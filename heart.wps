@@ -1,6 +1,8 @@
 % based on the JavaScript example from
 % https://developer.mozilla.org/samples/canvas-tutorial/2_6_canvas_beziercurveto.html
 
+0 0 150 150 .gbox
+
 q
 75 40 m
 75 37 70 25 50 25 c

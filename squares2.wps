@@ -1,6 +1,8 @@
 % based on the JavaScript example from
 % https://developer.mozilla.org/en/drawing_graphics_with_canvas
 
+0 0 100 100 .gbox
+
 q
 0.8 0 0 rg
 0 0 m

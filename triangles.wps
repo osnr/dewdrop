@@ -1,6 +1,8 @@
 % based on the PDF example from
 % https://developer.mozilla.org/samples/canvas-tutorial/2_3_canvas_lineto.html
 
+0 0 150 150 .gbox
+
 25 25 m
 105 25 l
 25 105 l

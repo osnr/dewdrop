@@ -24,7 +24,7 @@
 /bowtie1 { % fillStyle angle x y --
   gsave
   translate
-  .deg2rad rotate
+  rotate
   bowtie
   bowtieDot
   grestore

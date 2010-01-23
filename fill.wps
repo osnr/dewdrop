@@ -1,15 +1,20 @@
 % based on the JavaScript example from
 % https://developer.mozilla.org/samples/canvas-tutorial/4_1_canvas_fillstyle.html
 
+/n 5 def
+/w 25 def
+
+0 0 n w mul dup .gbox
+
 4 dict begin
-  0 1 5 {
+  0 1 n {
     /i exch def
-    /ii 255 255 5 div i mul sub def
-    0 1 5 {
+    /ii 1 1 n div i mul sub def
+    0 1 n {
       /j exch def
-      /jj 255 255 5 div j mul sub def
-      ii jj 0 .rgb .setFillStyle
-      25 j mul 25 i mul 25 25 rectfill
+      /jj 1 1 n div j mul sub def
+      ii jj 0 setrgbcolor
+      w j mul w i mul w w rectfill
     } for
   } for
 end

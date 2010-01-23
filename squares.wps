@@ -1,7 +1,5 @@
-%%% -*- ps -*-
-%%%
-%%% based on the JavaScript example from
-%%% https://developer.mozilla.org/samples/canvas-tutorial/5_1_canvas_savestate.html
+% based on the JavaScript example from
+% https://developer.mozilla.org/samples/canvas-tutorial/5_1_canvas_savestate.html
 
 q
 0 0 m 0 0 150 150 re f

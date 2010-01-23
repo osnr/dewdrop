@@ -3,12 +3,12 @@
 
 0 0 150 150 .gbox
 
-%0 0 m
+%0 0 m % TODO m op meaning?
 newpath
 75 75 50 0 360 arc
 S
 110 75 m
-75 75 35 0 180 arc
+75 75 35 0 180 arcn
 S
 65 65 m
 60 65 5 0 360 arc

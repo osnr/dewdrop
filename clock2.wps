@@ -1,6 +1,9 @@
 % based on the PostScript example from
 % http://oreilly.com/openbook/cgi/ch06_02.html
 
+0 0 150 150 .gbox
+1 0 0 -1 0 150 cm
+
 /max      150 def
 /width    1.5 def
 /marker   5 def
@@ -17,9 +20,9 @@
 /blue   {0 0 1 setrgbcolor} def
 /black  {0 0 0 setrgbcolor} def
 
-/hangle {$h 12 div .pi 2 mul mul neg} def % TODO smooth motion
-/mangle {$m 60 div .pi 2 mul mul neg} def
-/sangle {$s 60 div .pi 2 mul mul neg} def
+/hangle {$h 12 div 360 mul neg .deg2rad} def % TODO smooth motion
+/mangle {$m 60 div 360 mul neg .deg2rad} def
+/sangle {$s 60 div 360 mul neg .deg2rad} def
 
 /hand { % segment angle color width --
   origin moveto
@@ -38,12 +41,12 @@
   width setlinewidth
   black clippath fill % background
   center dup translate
-  90 .deg2rad rotate
+  90 rotate
   gsave % markers
   12 {
     radius marker sub 0 moveto 
     marker 0 rlineto red stroke
-    .pi 6 div rotate
+    360 12 div rotate
   } repeat
   grestore
   newpath origin radius 0 360 arc blue stroke % circle
