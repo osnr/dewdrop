@@ -1,27 +1,49 @@
+// TODO one run, exec function or name !quoted
+
+function isQuoted(V) {
+  return V.q;
+}
+
+function quote(V) {
+  V.q = true;
+  return V;
+}
+
+function unquote(V) {
+  delete V.q;
+  return V;
+}
+
 function Symbol(N) {
-  if("/" == N[0]) {
-    this.nm = N.substring(1);
-    this.q = true;
-  } else this.nm = N;
+  this.nm = N;
   return this;
 }
 
 function isSymbol(V) {
-  return V &&  V.constructor == Symbol;
-}
-
-function isQuoted(V) {
-  return V.q;
+  return V &&  V.constructor === Symbol;
 }
 
 function symbolName(V) {
   return V.nm;
 }
 
-function ps0(L, F, S) {
+function isArray(V) {
+  return V &&  V.constructor === Array;
+}
+
+function inDs(Ds, K) {
+  for(var I = Ds.length - 1; 0 <= I; --I) {
+	if("undefined" != typeof Ds[I][K])
+	  return Ds[I];
+  }
+  return false;
+}
+
+function ps0(L, Os, Ds) { // TODO Nd name dict name=>sym?
   var N = L.length;
   var I = 0;
 
+  // TODO white space ffeed + null???
   function member(C, L) {return 0 <= L.indexOf(C);}
   function peek() {return I < N && L[I];}
   function xchar() {return I < N && L[I++];}
@@ -35,7 +57,9 @@ function ps0(L, F, S) {
     }
   }
 
-  function text() { // TODO hex text in <>
+  function text() {
+    // TODO hex text in <>
+    // TODO ASCII base-85 <~ and ~>
     xchar();
     var L = [];
     var N = 1;
@@ -58,6 +82,7 @@ function ps0(L, F, S) {
             case "n": C = "\n"; break;
             case "r": C = "\r"; break;
             case "t": C = "\t"; break;
+            // TODO \n (ignore \n) \b \f \ddd octal
             default:
               C = false;
           }
@@ -69,11 +94,14 @@ function ps0(L, F, S) {
   }
 
   function symbol() {
+    // TODO 1e10 1E-5 real numbers
+    // TODO radix numbers 8#1777 16#FFFE 2#1000
     var C = xchar();
+    if(member(C, "()<>/% \t\n")) throw "Symbol expected";
     var N = member(C, "+-0123456789.");
     var F = "." == C;
     var L = [C];
-    while(peek() && !member(peek(), "%/[]{}<>( \t\n")) {
+    while(peek() && !member(peek(), "()<>[]{}/% \t\n")) {
       C = xchar();
       L.push(C);
       if(N && !member(C, "0123456789")) {
@@ -86,228 +114,310 @@ function ps0(L, F, S) {
     return N ? (F ? parseFloat(L) : parseInt(L, 10)) : new Symbol(L);
   }
 
-  function proc() {
-    xchar();
-    var L = [];
-    while(peek()) {
-      var T = token();
-      if("}" == T) break;
-      if(T || T == 0) L.push(T);
-    }
-    return L;
-  }
+  var D = 0;
 
   function token() {
     skip();
-    switch(peek()) { // TODO read dict in <<>>
+    switch(peek()) { // TODO read dict in <> <~~> <<>>
       case false: return undefined;
       case "%": return comment();
-      case "[": return xchar();
-      case "]": return xchar();
-      case "{": return proc();
-      case "}": return xchar();
+      case "[": return new Symbol(xchar());
+      case "]": return new Symbol(xchar());
+      case "{": D++; return new Symbol(xchar());
+      case "}": D--; return new Symbol(xchar());
+      case "/": xchar(); var X = symbol(); return quote(X);
       case "(": return text();
       default: return symbol();
     }
   }
 
-  function parse(E) {
-    var G = true;
-    while(G && peek()) {
+//   var Es = [];
+
+  function exec() {
+    var X = Os.pop();
+    if(isSymbol(X) && !isQuoted(X)) { // executable name
+      var K = symbolName(X);
+      var D = inDs(Ds, K);
+      var V = D && D[K];
+      if(V) {
+        Os.push(V);
+        exec();
+//         Es.push(V);
+//         if("function" == typeof V) V();
+//         //else Os.push(V);
+//         else run(V);
+      } else throw "Unknown operator 1 '" + K + "'";
+    } else if(isArray(X) && isQuoted(X)) { // proc
+      var M = X.length;
+      for(var I = 0; I < M; I++) {
+        //Es.push(X[I]);
+        Os.push(X[I]);
+        exec();
+      }
+    } else if("function" == typeof X) X(); // operator
+    else Os.push(X);
+  }
+
+//   function run(T) {
+//     if(T || T == 0) {
+// //       if(isSymbol(T) && !isQuoted(T)) {
+// //         var K = symbolName(T);
+// //         var D = inDs(Ds, K);
+// //         var V = D && D[K];
+// //         if(V) {
+// //           if("function" == typeof V) V();
+// //           //else Os.push(V);
+// //           else run(V);
+// //         } else throw "Unknown operator 1 '" + K + "'";
+// //       } else Os.push(T);
+//     }
+//   }
+
+  function parse() {
+    while(peek()) {
       var T = token();
       if(T || T == 0) {
-        if(isSymbol(T) && !isQuoted(T)) {
-          var X = symbolName(T);
-          if(F[X]) F[X]();
-          else throw "Unknown operator '" + X + "'";
-          if(E == X) G = false;
-        } else S.push(T);
+        Os.push(T);
+        if(D <= 0 || 1 == D && isSymbol(T) && "{" == symbolName(T))
+          exec();
       }
     }
-    return S;
+    return Os;
   }
 
   return parse();
 }
 
 function wps(E, T) {
-  var S = [];
-  var F = {};
-  var C = E.getContext("2d");
+  var Os = [];
+  var Sd = {};
+  var Ds = [Sd];
 
   // trivial
-  F["true"] = function() {S.push(true);};
-  F["false"] = function() {S.push(false);};
-  F["null"] = function() {S.push(null);};
+  Sd[".true"] = function() {Os.push(true);};
+  Sd[".false"] = function() {Os.push(false);};
+  Sd[".null"] = function() {Os.push(null);};
+
+  Sd["cvx"] = function() {
+    var X = Os.pop();
+    if(isSymbol(X) && isQuoted(X)) Os.push(unquote(X)); // executable name
+    else if(isArray(X) && !isQuoted(X)) Os.push(quote(X)); // proc
+    // TODO string -> parse
+    else Os.push(X);
+  };
 
   // math
-  F["neg"] = function() {S.push(-1 * S.pop());};
-  F["add"] = function() {S.push(S.pop() + S.pop());};
-  F["mul"] = function() {S.push(S.pop() * S.pop());};
-  F["div"] = function() {var X = S.pop();S.push(S.pop() / X);};
-  F["mod"] = function() {var X = S.pop();S.push(S.pop() % X);};
+  Sd["neg"] = function() {Os.push(-1 * Os.pop());};
+  Sd["add"] = function() {Os.push(Os.pop() + Os.pop());};
+  Sd["mul"] = function() {Os.push(Os.pop() * Os.pop());};
+  Sd["div"] = function() {var X = Os.pop(); Os.push(Os.pop() / X);};
+  Sd["mod"] = function() {var X = Os.pop(); Os.push(Os.pop() % X);};
 
-  // stack
-  F["exch"] = function() {
-    var Y = S.pop();
-    var X = S.pop();
-    S.push(Y);
-    S.push(X);
+  // stack and array
+  var M = {};
+  Sd["mark"] = function() {Os.push(M);};
+  Sd["counttomark"] = function() {
+    var N = 0;
+    for(var I = Os.length - 1; 0 <= I; I--)
+      if(M === Os[I]) return N;
+      else N++;
+    throw "Mark not found";
   };
-  F["dup"] = function() {var X = S.pop(); S.push(X); S.push(X);};
-  F["clear"] = function() {S.length = 0;};
-  F["pop"] = function() {S.pop();};
-  F["index"] = function() {S.push(S[S.pop()]);}; // TODO from other end!!!
-  F["roll"] = function() {
-    var J = S.pop();
-    var N = S.pop();
+  Sd["exch"] = function() {
+    var Y = Os.pop();
+    var X = Os.pop();
+    Os.push(Y);
+    Os.push(X);
+  };
+  Sd["clear"] = function() {Os.length = 0;};
+  Sd["pop"] = function() {Os.pop();};
+  Sd["index"] = function() {
+    Os.push(Os[Os.length - 2 - Os.pop()]);
+  };
+  Sd["roll"] = function() {
+    var J = Os.pop();
+    var N = Os.pop();
     var X = [];
     var Y = [];
     for(var I = 0; I < N; I++)
-      if(I < J) X.unshift(S.pop());
-      else Y.unshift(S.pop());
-    for(I = 0; I < J; I++) S.push(X.shift());
-    for(I = 0; I < N - J; I++) S.push(Y.shift());
+      if(I < J) X.unshift(Os.pop());
+      else Y.unshift(Os.pop());
+    for(I = 0; I < J; I++) Os.push(X.shift());
+    for(I = 0; I < N - J; I++) Os.push(Y.shift());
   };
-  F["copy"] = function() {
-    var N = S.pop();
+  Sd["copy"] = function() {
+	var N = Os.pop();
+	if("object" == typeof N) {
+	  var X = Os.pop();
+	  for(var I in X)
+        N[I]=X[i];
+    } else {
+      var X = Os.length - N;
+      for(var I = 0; I < N; I++)
+        Os.push(X + I);
+    }
+  };
+
+  Sd["length"] = function() {Os.push(Os.pop().length);};
+  Sd["astore"] = function() {
+    var A = Os.pop();
+    var N = A.length;
+    var X = Os.length - N;
     for(var I = 0; I < N; I++)
-      S.push(S[N - 1]); // TODO from other end!!!
+      A[I] = Os[X + I];
   };
 
-  F["eq"] = function() {var Y = S.pop(); var X = S.pop(); S.push(X == Y);};
-  F["lt"] = function() {var Y = S.pop(); var X = S.pop(); S.push(X < Y);};
+  Sd["eq"] = function() {var Y = Os.pop(); var X = Os.pop(); Os.push(X == Y);};
+  Sd["lt"] = function() {var Y = Os.pop(); var X = Os.pop(); Os.push(X < Y);};
 
-  //F["not"] = function() {var X = S.pop(); S.push(X == undefined || X == false);};
-  //F[".nand"] = function() {S.push(F["not"]() || F["not"]());};
+  //Sd["not"] = function() {var X = Os.pop(); Os.push(X == undefined || X == false);};
+  //Sd[".nand"] = function() {Os.push(Sd["not"]() || Sd["not"]());};
 
-  F["ifelse"] = function() {
-    var N = S.pop();
-    var P = S.pop();
-    var C = S.pop();
+  Sd["ifelse"] = function() {
+    var N = Os.pop();
+    var P = Os.pop();
+    var C = Os.pop();
     if(C == true) run(P);
     else run(N);
   };
-  F["repeat"] = function() {
-    var B = S.pop();
-    var N = S.pop();
-    for(var I = 0; I < N; I++) run(B);
-  };
-  F["for"] = function() {
-    var B = S.pop();
-    var L = S.pop();
-    var K = S.pop();
-    var J = S.pop();
+  Sd["for"] = function() {
+    var B = Os.pop();
+    var L = Os.pop();
+    var K = Os.pop();
+    var J = Os.pop();
     if(K < 0) {
       for(var I = J; L <= I; I += K) {
-        S.push(I);
+        Os.push(I);
         run(B);
       }
     } else {
       for(var I = J; I <= L; I += K) {
-        S.push(I);
+        Os.push(I);
         run(B);
       }
     }
   };
 
-  F["."] = function() {alert(S.pop());};
-  F["pstack"] = function() {alert(S);};
+  Sd["="] = function() {alert(Os.pop());};
+  Sd["=="] = function() {alert(Os.pop());}; // TODO
+  Sd["stack"] = function() {alert(Os);}; // TODO
+  Sd["pstack"] = function() {alert(Os);}; // TODO
 
-  function run(C) {
-    if(!C.length) S.push(C);
-    else {
-      var M = C.length;
-      for(var I = 0; I < M; I++) {
-        var T = C[I];
-        if(isSymbol(T) && !isQuoted(T)) {
-          var X = symbolName(T);
-          if(F[X]) F[X]();
-          else throw "Unknown operator '" + X + "'";
-        } else S.push(T);
-      }
-    }
-  }
+//   function run1(T) {
+//     if(T || T == 0) {
+//       if(isSymbol(T) && !isQuoted(T)) {
+//         var K = symbolName(T);
+//         var D = inDs(Ds, K);
+//         var V = D && D[K];
+//         if(V) {
+//           if("function" == typeof V) V();
+//           //else Os.push(V);
+//           else run(V);
+//         } else throw "Unknown operator 1 '" + K + "'";
+//       } else Os.push(T);
+//     }
+//   }
 
-  F["get"] = function() { // dict key -- any
-    var K = S.pop();
-    var D = S.pop();
+//   function run(C) {
+//     if(!C.length) Os.push(C); // TODO run?
+//     else {
+//       var M = C.length;
+//       for(var I = 0; I < M; I++) {
+//         var T = C[I];
+//         run1(T);
+// //         if(isSymbol(T) && !isQuoted(T)) {
+// //           var X = symbolName(T);
+// //           if(Sd[X]) Sd[X]();
+// //           else throw "Missing operator '" + X + "'";
+// //         } else Os.push(T);
+//       }
+//     }
+//   }
+
+  Sd["dict"] = function() {Os.pop(); Os.push({});};
+  Sd["get"] = function() { // dict key -- any
+    var K = Os.pop();
+    var D = Os.pop();
     // TODO other datatypes http://www.capcode.de/help/get
-    S.push(D[K]);
+    if(isSymbol(K)) Os.push(D[symbolName(K)]);
+    else Os.push(D[K]);
   };
-  F["put"] = function() { // dict key any --
-    var V = S.pop();
-    var K = S.pop();
-    var D = S.pop();
+  Sd["put"] = function() { // dict key any --
+    var V = Os.pop();
+    var K = Os.pop();
+    var D = Os.pop();
     // TODO other datatypes http://www.capcode.de/help/put
-    D[K] = V;
+    if(isSymbol(K)) D[symbolName(K)] = V;
+    else D[K] = V;
+  };
+  Sd["begin"] = function() {Ds.push(Os.pop());};
+  Sd["end"] = function() {Ds.pop();};
+  Sd["currentdict"] = function() {Os.push(Ds[Ds.length - 1]);};
+  Sd["where"] = function() {
+    var K = Os.pop();
+    var D = inDs(Ds, K);
+	if(D) {
+	  Os.push(D);
+	  Os.push(true);
+	} else Os.push(false);
   };
 
-  F["def"] = function() {
-    var C = S.pop();
-    var N = S.pop();
-    if(isSymbol(N) && isQuoted(N)) F[symbolName(N)] = function() {run(C);};
-    else throw "Wrong operator name '" + N + "' as '" + typeof N
-      + "' for '" + C + "'";
-  };
+//   Sd["def"] = function() {
+//     var C = Os.pop();
+//     var N = Os.pop();
+//     if(isSymbol(N) && isQuoted(N)) Sd[symbolName(N)] = function() {run(C);};
+//     else throw "Wrong operator name '" + N + "' as '" + typeof N
+//       + "' for '" + C + "'";
+//   };
+
+  Sd["array"] = function() {Os.push(new Array(Os.pop()));};
+
+  Sd["restore"] = function() {Os.pop();}; // TODO
+  Sd["save"] = function() {Os.push([]);}; // TODO
+
+  Sd["bind"] = function() {}; // TODO
+  Sd["load"] = function() {}; // TODO
+
+  //////////////////////////////////////////////////////////
 
   // js ffi operators
 
-  F[".call"] = function() { // dict key nargs -- result
-    var N = S.pop();
-    var K = S.pop();
-    var D = S.pop();
+  Sd[".call"] = function() { // dict key nargs -- result
+    var N = Os.pop();
+    var K = Os.pop();
+    var D = Os.pop();
     var X = [];
-    for(var I = 0; I < N; I++) X.unshift(S.pop());
-    S.push(D[K].apply(D, X));
+    for(var I = 0; I < N; I++) X.unshift(Os.pop());
+    Os.push(D[K].apply(D, X));
+  };
+  Sd[".math"] = function() { // -- Math
+    Os.push(Math);
+  };
+  Sd[".gc"] = function() { // -- gc
+    Os.push(E.getContext("2d"));
   };
 
-  F[".gc"] = function() { // -- gc
-    S.push(C);
-  };
-  F[".math"] = function() { // -- Math
-    S.push(Math);
-  };
+  /////////////////////////////////////////////////////
 
   // html5 utility operators
 
   // TODO js ffi to manipulate strings so the following can be in ps
-  F[".rgb"] = function() {
-    var B = S.pop();
-    var G = S.pop();
-    var R = S.pop();
-    S.push("rgb(" + R + "," + G + "," + B + ")");
+  Sd[".rgb"] = function() {
+    var B = Os.pop();
+    var G = Os.pop();
+    var R = Os.pop();
+    Os.push("rgb(" + R + "," + G + "," + B + ")");
   };
-  F[".rgba"] = function() {
-    var A = S.pop();
-    var B = S.pop();
-    var G = S.pop();
-    var R = S.pop();
-    S.push("rgba(" + R + "," + G + "," + B + "," + A + ")");
+  Sd[".rgba"] = function() {
+    var A = Os.pop();
+    var B = Os.pop();
+    var G = Os.pop();
+    var R = Os.pop();
+    Os.push("rgba(" + R + "," + G + "," + B + "," + A + ")");
   };
-
-  // "junk" for tiger.eps
-
-  F["save"] = function() {S.push(true);};
-  F["restore"] = function() {S.push(true);};
-  F["bind"] = function() {};
-  F["dict"] = function() {};
-  F["load"] = function() {};
-  F["begin"] = function() {};
-  F["end"] = function() {};
-
-  F["where"] = function() {};
-  //F["currentflat"] = function() {S.push(0);};
-  //F["setflat"] = function() {};
-  //F["clippath"] = function() {};
-  F["transform"] = function() {};
-  //F["itransform"] = function() {};
-  //F["currentpoint"] = function() {S.push(0); S.push(0);};
-  F["*"] = function() {};
-  //F["showpage"] = function() {};
 
   if(T.length)
     for(var I = 0; I < T.length; I++)
-      ps0(T[I], F, S);
-  else ps0(T, F, S);
+      ps0(T[I], Os, Ds);
+  else ps0(T, Os, Ds);
 }

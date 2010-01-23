@@ -1,5 +1,24 @@
 %%% (c) 2009 Tomas Hlavaty
 
+currentdict/systemdict currentdict put
+
+systemdict/{/mark cvx put
+systemdict/[/mark cvx put
+
+systemdict/]
+/counttomark cvx
+/array cvx
+/astore cvx
+/exch cvx
+/pop cvx
+5 array astore cvx put
+
+systemdict/}/] cvx/cvx cvx 2 array astore cvx put
+
+%[1 2 3] =
+
+systemdict/def{currentdict 2 index 2 index put pop pop} put
+
 %% math
 
 /abs{.math(abs)1 .call}def
@@ -35,13 +54,24 @@
 /sub{neg add}def
 /idiv{div .floor}def
 
+%% stack
+
+/dup{0 index}def
+
 %% conditionals
+
+/true .true def
+/false .false def
+/null .null def
 
 /ne{eq not}def
 /ge{lt not}def
 /le{1 index 1 index eq 3 1 roll lt or}def
 /gt{le not}def
 /if{{}ifelse}def
+
+/loop{0 exch 0 exch 1 exch for}def
+/repeat{1 1 4 2 roll for}def
 
 %% html5
 
@@ -55,13 +85,11 @@
 
 %% canvas
 
-% TODO track state, e.g. origin x y
-
 /.save{(save)0 .gcall0}def
 /.restore{(restore)0 .gcall0}def
-/scale{(scale)2 .gcall0}def
-/rotate{(rotate)1 .gcall0}def
-/translate{(translate)2 .gcall0}def
+/.scale{(scale)2 .gcall0}def
+/.rotate{(rotate)1 .gcall0}def
+/.translate{(translate)2 .gcall0}def
 /.transform{(transform)6 .gcall0}def
 /.setTransform{(setTransform)6 .gcall0}def
 /.createLinearGradient{(createLinearGradient)4 .gcall1}def
@@ -78,10 +106,10 @@
 /.bezierCurveTo{(bezierCurveTo)6 .gcall0}def
 /.arcTo{(arcTo)5 .gcall0}def
 /.rect{(rect)4 .gcall0}def
-/arc{(arc)6 .gcall0}def
-/fill{(fill)0 .gcall0}def
-/stroke{(stroke)0 .gcall0}def
-/clip{(clip)0 .gcall0}def
+/.arc{(arc)6 .gcall0}def
+/.fill{(fill)0 .gcall0}def
+/.stroke{(stroke)0 .gcall0}def
+/.clip{(clip)0 .gcall0}def
 /.isPointInPath{(isPointInPath)2 .gcall1}def
 /.fillText{(fillText)4 .gcall0}def
 /.strokeText{(strokeText)4 .gcall0}def
@@ -127,6 +155,65 @@
 
 %% PostScript
 
+/.deg2rad{.pi 180 div mul}def
+
+/identmatrix{pop [1 0 0 1 0 0]}def % TODO fill
+/matrix{6 array identmatrix}def
+
+/.cx 0 def
+/.cy 0 def
+/.px 0 def
+/.py 0 def
+/.tm0 matrix def
+/.tm matrix def
+/.tmd matrix def
+
+/.setPoint{/.cy exch def/.cx exch def}def
+/.setPath{/.py exch def/.px exch def}def
+
+/currentpoint{.cx .cy}def
+
+/setmatrix{/.tm exch def}def
+
+/..p{2 dict begin/y exch def/x exch def}def
+/..P{end}def
+/..tm{6 dict begin/ty exch def/tx exch def/d exch def/c exch def/b exch def/a exch def}def
+/..TM{end}def
+/.x{a x mul c y mul tx add add}def
+/.y{b x mul d y mul ty add add}def
+/.mmul{}def % TODO
+/.tmu{/.cx .x def/.cy .y def/.tmd .tmd}def % TODO
+%– initmatrix – 	Set CTM to device default
+%matrix defaultmatrix matrix 	Fill matrix with device default matrix
+%matrix currentmatrix matrix 	Fill matrix with CTM
+
+/translate{2 copy ..p 1 0 0 1 6 4 roll ..tm .tmu ..TM ..P .translate}def % TODO
+%tx ty matrix translate matrix 	Define translation by (tx , ty)
+
+%sx sy scale – 	Scale user space by sx and sy
+%sx sy matrix scale matrix 	Define scaling by sx and sy
+
+%angle rotate – 	Rotate user space by angle degrees
+%angle matrix rotate matrix 	Define rotation by angle degrees
+
+%matrix concat – 	Replace CTM by matrix ´ CTM
+%matrix1 matrix2 matrix3 concatmatrix matrix3 	Fill matrix3 with matrix1 ´ matrix2
+
+/transform{..p .tm ..tm .x .y ..TM ..P}def % TODO
+%x y matrix transform x¢ y¢ 	Transform (x, y) by matrix
+
+%dx dy dtransform dx¢ dy¢ 	Transform distance (dx, dy) by CTM
+%dx dy matrix dtransform dx¢ dy¢ 	Transform distance (dx, dy) by matrix
+
+%x¢ y¢ itransform x y 	Perform inverse transform of (x¢, y¢) by CTM
+%x¢ y¢ matrix itransform x y 	Perform inverse transform of (x¢, y¢) by matrix
+
+%dx¢ dy¢ idtransform dx dy 	Perform inverse transform of distance (dx¢, dy¢) by CTM
+%dx¢ dy¢ matrix idtransform dx dy 	Perform inverse transform of distance (dx¢, dy¢) by matrix
+
+%matrix1 matrix2 invertmatrix matrix2 	Fill matrix2 with inverse of matrix1
+
+
 /gsave{.save}def
 /grestore{.restore}def
 /rectclip{.clipRect}def
@@ -134,21 +221,49 @@
 /rectstroke{.strokeRect}def
 /newpath{.beginPath}def
 /closepath{.closePath}def
-/moveto{.moveTo}def
-/lineto{.lineTo}def
+/moveto{2 copy .setPoint 2 copy .setPath .moveTo/.tm0 matrix def}def
+/lineto{2 copy .setPoint 2 copy .setPath .lineTo/.tm0 matrix def}def
 /arcto{.arcTo}def
 
 /setlinewidth{.setLineWidth}def
-/setlinecap{.setLineCap}def
-/setlinejoin{.setLineJoin}def
+/setlinecap{.setLineCap}def % TODO
+/setlinejoin{.setLineJoin}def % TODO
 /setmiterlimit{.setMiterLimit}def
 
-/setgray{255 mul dup dup .rgb .setFillStyle}def
-/setrgbcolor{3{255 * 3 1 roll} repeat .rgb .setFillStyle}def
+/currentlinewidth{.getLineWidth}def
+/currentlinecap{<</butt 0/round 1/square 2>> .getLineCap get}def
+/currentlinejoin{<</miter 0/round 1/bevel 2>> .getLineJoin get}def
+/currentmiterlimit{.getMiterLimit}def
+
+/setgray{255 mul dup dup .rgb dup .setStrokeStyle .setFillStyle}def
+/setrgbcolor{3{255 mul 3 1 roll} repeat .rgb dup .setStrokeStyle .setFillStyle}def
 /setfont{} def % TODO C.font = N + "pt " + F.V;
-/clippath{}def % TODO
-/show{.fillText}def % TODO 0 exch 0 exch .fillText
+/clippath{0 0 .gcanvas(width)get .gcanvas(height)get .rect}def % TODO
+/show{currentpoint 3 2 roll .fillText .strokeText}def % TODO
 /rlineto{lineto}def % TODO
+
+/currentflat{42}def
+/setflat{pop}def
+
+/transform{}def % TODO
+/itransform{}def % TODO
+
+/currentpoint{0 0}def % TODO
+
+/showpage{}def
+
+/arc{.deg2rad exch .deg2rad exch true(arc)6 .gcall0}def % TODO currentpoint
+/arcn{.deg2rad exch .deg2rad exch false(arc)6 .gcall0}def % TODO currentpoint
+
+/fill{.fill newpath currentpoint moveto}def % TODO
+
+/setdash{pop pop}def
+
+/stroke{.stroke newpath currentpoint moveto}def
+
+/curveto{2 copy .setPoint .bezierCurveTo}def
+
+/grestoreall{}def % TODO
 
 %% PDF
 
@@ -210,7 +325,7 @@
 /G{}def % TODO
 /g{}def % TODO
 /RG{}def % TODO
-/rg{3{255 * 3 1 roll} repeat .rgb .setFillStyle}def % TODO
+/rg{3{255 mul 3 1 roll} repeat .rgb dup .setStrokeStyle .setFillStyle}def % TODO
 /K{}def % TODO
 /k{}def % TODO
 /sh{}def % TODO
@@ -225,3 +340,8 @@
 /EMC{}def % TODO
 /BX{}def % TODO
 /EX{}def % TODO
+
+%% finish
+
+/userdict 1000 dict def
+userdict begin
