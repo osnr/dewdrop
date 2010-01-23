@@ -380,6 +380,8 @@ function Wps() {
     // savetype
   };
 
+//   Sd["save"] = function() {Os.push([]);}; // TODO
+//   Sd["restore"] = function() {Os.pop();}; // TODO
   Sd["save"] = function() {
     var X = Ds.slice();
     for(var I = 0; I < X.length; I++) {

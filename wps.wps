@@ -360,7 +360,7 @@ initmatrix
 /M{setmiterlimit}.bdef
 /d{setdash}.bdef % TODO
 /ri{}.bdef % TODO
-/i{}.bdef % TODO
+/i{1 .min setflat}.bdef
 /gs{}.bdef % TODO
 /q{gsave}.bdef
 /Q{grestore}.bdef
@@ -368,10 +368,8 @@ initmatrix
 /m{newpath moveto}.bdef % TODO only if not m previously
 /l{lineto}.bdef
 /c{.bezierCurveTo}.bdef
-%/v{currentpoint cp2 p3 c}.bdef % TODO fix arg order
-/v{}.bdef % TODO fix arg order
-%/y{cp1 p3 p3 c}.bdef % TODO fix arg order
-/y{}.bdef % TODO fix arg order
+/v{currentpoint 6 2 roll c}.bdef
+/y{2 copy c}.bdef
 /h{closepath}.bdef % TODO
 /re{.rect}.bdef % TODO really, or x y m , x+w y l , x+w y+h l , x y+h l , h
 /S{stroke}.bdef
