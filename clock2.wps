@@ -28,7 +28,6 @@
 /hand { % segment angle color width --
   origin moveto
   width mul setlinewidth
-%  cvx exec
   load exec
   2 copy   cos mul
   3 1 roll sin mul
