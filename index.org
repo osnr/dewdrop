@@ -1,39 +1,28 @@
-#+options: author:nil num:nil creator:nil timestamp:nil
+#+title: WPS: PostScript for the Web
+#+description: PostScript and PDF interpreter for HTML 5 canvas
+#+keywords: PostScript, PDF, interpreter, HTML 5, canvas, JavaScript
+#+options: num:nil toc:t
+#+macro: ps [[http://www.capcode.de/help/$1][$1]]
 
-PostScript and PDF interpreter in JavaScript
+#+BEGIN_HTML:
+<p class="h0">WPS: PostScript for the Web</p>
+#+END_HTML
 
-PostWeb \\
-WebScript
+Welcome to WPS, a PostScript and PDF interpreter for HTML 5 canvas.
 
-TODO reuse parsed wps.wps
+Note that to see and run the examples, JavaScript must be enabled and
+your browser must support HTML 5 canvas (latest Firefox, Opera and
+Chrome should work).
 
-QQQ
-
-Everything is interpreted.  Compilation is translation to lower
-abstraction level or precomputing.
-
-psi/z-matrix.c
-Resource/Init/opdfread.ps
-
-* PostScript interpreter
-
-- stack
-- function dictionary
-- data types
-- reader
-- interpreter/evaluator
-- native bindings (JavaScript FFI)
-- PostScript and PDF API
-
-PDF is stateless?
-
-PostScript is stateful?
+This document allows you to try simple PostScript programs in the WPS
+sandbox.  A few examples are presented here accompanied by a brief
+description of the interpreter and listing some implementation notes
+for my future reference.
 
 #+begin_html
 <style>
 tt {background-color:#fdf}
 canvas {width:12em;height:12em;border:1px dashed black}
-/*canvas {width:10em;height:10em;border:1px dashed black;position:relative;top:0;left:0}*/
 </style>
 #+end_html
 
@@ -48,7 +37,91 @@ function $$(Id) {return $(Id).textContent;}
 </script>
 #+end_html
 
+* WPS sandbox
+
+#+html: <canvas id="xsandbox"></canvas>
+#+begin_html
+<p>Sandbox:</p>
+<p>
+<textarea id="sandbox" style="width:100%" rows="18">
+/n 10 def
+/w 25 def
+
+0 0 n w mul dup .gbox
+
+4 dict begin
+  0 1 n 1 sub {
+    /i exch def
+    /ii 1 1 n div i mul sub def
+    0 1 n 1 sub {
+      /j exch def
+      /jj 1 1 n div j mul sub def
+      ii jj 0 setrgbcolor
+      w j mul w i mul w w rectfill
+    } for
+  } for
+end
+</textarea>
+</p>
+<script>
+function sandbox() {wps($("xsandbox"), [$$("wps"), $("sandbox").value]);}
+</script>
+<button onclick="javascript:sandbox();">Run</button> code from sandbox.
+#+end_html
+
+* PostScript interpreter
+
+A few initial ideas and questions:
+
+- Learn and implement a Forth like language.  PostScript seems like a
+  good choice:
+  - It has the right syntax and stack based evaluation.
+  - It is practical and widely used.
+  - It has long sucessful history in print and publishing (and more).
+  - It is a predecessor of PDF.
+  - Almost everything (e.g. editors, pictures, documentation) can be
+    reused to a great extent.
+  - It is ideal for HTML 5 canvas experiments because from the
+    PostScript point of view, canvas is just another low level device.
+- Flexibility and simplicity first.
+  - Optimize for fast code change, not for raw running speed.  Keep
+    the code small and regular if possible.
+  - Can JavaScript be used as a portable assembler for the Web?  Is
+    building scripting languages on top of JavaScript feasible and
+    efficient enough for real-world use?  If not, why?  Find the
+    limits.
+- Keep the language/environment specific core as small as possible.
+  - Allow to port the interpreter to other languages on both
+    client and server side.
+  - Be open for the possibility of running "the same code" on both the
+    client and server side.
+- Can PDF documents be displayed in web browsers without server-side
+  image rendering?
+  - Implement a canvas based version of PDF page contents in [[http://ondoc.logand.com][OnDoc]].
+- It might be possible to implement different backend devices to be
+  used instead of HTML 5 canvas, for example a SVG device.
+- Investigate the possibility of implementing a Lisp interpreter
+  suitable for production use in web applications.
+
+There are several things WPS is about:
+
+- stack(s)
+- function (operator) dictionary
+- reader
+- interpreter/evaluator
+- data types
+- native bindings (JavaScript FFI)
+- PostScript and PDF API
+
+[[http://en.wikipedia.org/wiki/PostScript][PostScript]] can be seen as a crossover between [[http://en.wikipedia.org/wiki/Forth_(programming_language)][Forth]] and [[http://en.wikipedia.org/wiki/LISP][Lisp]]
+programming languages.  It is (roughly) a programming language with
+[[http://en.wikipedia.org/wiki/Reverse_Polish_notation][RPN]], complex data types, garbage collection and specialized
+drawing operators.
+
 ** Trivial example
+
+The core essence of a RPN calculator is captured in the JavaScript
+code bellow.
 
 #+html: <div id="example1">
 #+begin_src js2
@@ -56,7 +129,6 @@ function example1() {
    // define stack and operators
    var Os = [];
    var Sd = {};
-   var Ds = [Sd];
    Sd["+"] = function() {Os.push(Os.pop() + Os.pop());};
    Sd["="] = function() {alert(Os.pop());};
    // compute 1 2 = 3 + =
@@ -77,10 +149,19 @@ function ex1() {
 }
 </script>
 <button onclick="javascript:ex1()">Eval</button>
-"<tt>1 2 = 3 + =</tt>" from harcoded stack
+"<tt>1 2 = 3 + =</tt>"
 #+end_html
 
+=Os= stands for Operand Stack, which holds arguments for operators.
+=Sd= is a System Dictionary which contains definitions of operators
+(JavaScript functions in this case).
+
 ** Example with PostScript reader
+
+PostScript has simple but non-trivial syntax so a reader which reads
+text and creates internal PostScript objects is necessary.  The reader
+and evaluator is called =ps0= (an empty PostScript interpreter) in the
+JavaScript code bellow.
 
 #+html: <div id="example2">
 #+begin_src js2
@@ -104,176 +185,82 @@ function ex2() {
 }
 </script>
 <button onclick="javascript:ex2()">Eval</button>
-"<tt id="ex2">12 34 + dup = 56 + =</tt>" from string
+"<tt id="ex2">12 34 + dup = 56 + =</tt>"
 #+end_html
+
+=Ds= is a Dictionary Stack allowing users to redefine existing
+operators and revert back to the original ones.  =Es= is an Execution
+Stack which is used to implement a tail recursive evaluator.
 
 ** Example with recursion
 
+It is possible to write recursive code in PostScript.  The following
+PostScript code is from the [[http://www.math.ubc.ca/~cass/graphics/manual/pdf/ch9.pdf][Recursion in PostScript PDF document]].
+
 #+html: <div id="example3">
 #+begin_src ps
-% based on the example from
-% http://en.literateprograms.org/Fibonacci_numbers_(PostScript)
-% 0, 1, 1, 2, 3, 5, 8, 13, 21
-
-%0.1 1.2 2.3 4.5 3 {pstack} repeat
-%0.1 1.2 2.3 4.5 3 {pstack} .repeat
-
-%/fibonacci{0.1 1.2 2.3 4.5 pstack 3{pstack}repeat pstack}def
-%fibonacci
-
-%/fibonacci{0.1 1.2 2.3 4.5 3{1 add pstack}repeat}def
-%fibonacci
-
-%0 1 1 4 {add} for pstack clear % 10
-%1 2 6 { } for pstack clear % 1 3 5
-%3 -.5 1 { } for pstack clear % 3.0 2.5 2.0 1.5 1.0
-
-4 {(abc)} repeat pstack clear % (abc) (abc) (abc) (abc)
-1 2 3 4 3 {pop} repeat pstack clear % 1 % Pops 3 values (down to the 1)
-4 { } repeat pstack clear % % Does nothing four times
-mark 0 {(will not happen)} repeat pstack clear % mark
-
-%false false or =
-%true false or =
-%false true or =
-%true true or =
-
-% from http://www.math.ubc.ca/~cass/graphics/manual/pdf/ch9.pdf
-
-/factorial { 1 dict begin
-  /n exch def
-  n 0 eq {
-    1
-  }{
-    n n 1 sub factorial mul
-  } ifelse
-end } def
-
-%5 factorial pstack clear
-
-% args: array a of numbers
-% effect: sorts the array in order
-/bubblesort { 4 dict begin
-  /a exch def
-  /n a length 1 sub def
-n 0 gt {
-  % at this point only the n+1 items in the bottom of a remain to be sorted
-  % the largest item in that block is to be moved up into position n
-  n {
-    0 1 n 1 sub {
-      /i exch def
-      a i get a i 1 add get gt {
-         % if a[i] > a[i+1] swap a[i] and a[i+1]
-        a i 1 add
-        a i get
-        a i a i 1 add get
-         % set new a[i] = old a[i+1]
-        put
-         % set new a[i+1] = old a[i]
-        put
-      } if
-    } for
-    /n n 1 sub def
-  } repeat
-} if
-end } def
-
-%[5 4 3 2 1 0] bubblesort pstack clear
-
-%{1 2 add {2 mul}} pstack exec pstack exec pstack clear
-
-%1 2 1 {add {(hi)} dup} repeat pstack clear
-%1 2 {} pstack clear
-%1 2 {} exec pstack clear
-
-%(de repeat (N . B)
-%   (when (gt0 N)
-%      (run B 1) )
-%   (when (< 1 N)
-%      (repeat (- N 1) B) ) )
-
-%/fibonacci { % n --
-%  1 sub
-%  1 1 3 2 roll
-%  { 2 copy add 3 2 roll pop pstack} repeat
-%} bind def
-
-%0 fibonacci = % 0
-%1 fibonacci = % 1
-%2 fibonacci = % 1
-%6 fibonacci = % 8
-
-
-% http://en.wikibooks.org/wiki/Transwiki:Fibonacci_number_program#PostScript
-
-%/fib1 {
-%  1 dup
-%  3 -1 roll {
-%    dup
-%    3 -1 roll
-%    dup
-%    4 1 roll
-%    add
-%    3 -1 roll
-%  } repeat
-%} def
-
-%5 fib1 pstack clear
-
-/fib2 {
-  dup dup 1 eq exch 0 eq or not {
-    dup 1 sub fib2
-    exch 2 sub fib2
-    add
-  } if
+/factorial1 {
+  1 dict begin
+    /n exch def
+    n 0 eq {1}{n n 1 sub factorial1 mul} ifelse
+  end
 } def
 
-%5 fib2 pstack clear
+5 factorial1 =
 
+/factorial2 {
+  dup 0 eq {pop 1}{dup 1 sub factorial2 mul} ifelse
+} def
+
+5 factorial2 =
 #+end_src
 #+html: </div>
 #+begin_html
 <script>
 function ex3() {wps(null, [$$("wps"), $$("example3")]);}
 </script>
-<button onclick="javascript:ex3();">Eval</button>
+<button onclick="javascript:ex3();">Run</button> the example.
 #+end_html
 
-* The interpreter
+** Execution stack
 
-A few initial ideas:
+The interpreter manages its Execution Stack explicitly.
 
-- Learn and implement a Forth like language.  PostScript seems a great choice:
-  - It has the right syntax and stack based evaluation.
-  - It is practical and widely used.
-  - It has long sucessful history in print and publishing.
-  - It is a predecessor of PDF.
-  - Almost everything (e.g. editors, pictures, documentation) can be
-    reused to a great extent.
-  - It is ideal for HTML 5 canvas experiments because from the
-    PostScript point of view, canvas is just another low level device.
-- Flexibility and simplicity first.
-  - Optimize for fast change, not for raw running speed.  Keep the
-    code small and regular if possible.
-  - Can JavaScript be used as a portable assembler for web?  Is
-    building scripting languages on top of JavaScript feasible and
-    efficient enough for real-world use?  If not, why?  Find the
-    limits.
-- Keep the language/environment specific core as small as possible.
-  - Allow to port the interpreter to other languages on both
-    client and server side.
-  - Be open for the possibility of running "the same code" on both the
-    client and server side.
-- Can PDF documents be displayed in web browsers without server-side
-  image rendering?
-  - Implement a canvas based version of PDF page contents in [[http://ondoc.logand.com][OnDoc]].
-- Investigate the possibility of implementing a Lisp interpreter
-  suitable for production use in web applications.
+Most operators simply:
 
-Operators beginning with dot are non-standard low level operators
-which are subject to change.
+1. get their arguments from the Operand Stack
+2. perform some computation and/or side effects
+3. push results to the Operand Stack
+
+Some operators are more complex and involve some kind of control flow,
+e.g. {{{ps(if)}}}, {{{ps(repeat)}}}, {{{ps(for)}}}, {{{ps(loop)}}}
+operators.  Such operators:
+
+1. get their arguments from the Operand Stack
+2. perform single step of some computation and/or side effects
+3. push the continuation (code and arguments to be executed next) to
+   the Execution Stack
+
+[[http://en.wikipedia.org/wiki/Tail_call][Tail Call Optimisation]] is implemented using [[http://logand.com/picoWiki/trampoline][trampoline]].  The evaluator
+runs in a loop getting the next [[http://en.wikipedia.org/wiki/Continuation][continuation]] from the Execution Stack.
+Operators that want to "continue" their execution (i.e. use the
+interpreter to run other operators, including themselves) must perform
+only one step at a time and save the remaining steps (continuation) on
+the Execution Stack.
+
+For example, the {{{ps(if)}}} operator saves the "then" or "else" code
+branch to the Execution Stack depending on the value of the "test"
+argument.  It does not "evaluate" the chosen branch directly
+(recursively) but leaves the control to the evaluator loop.
+
+The whole process of interpreting is fed from JavaScript strings which
+are obtained from the content of HTML elements (sometimes hidden from
+this document).
 
 ** PostScript data types
+
+PostScript has quite rich set of data types.
+See [[http://www.adobe.com/devnet/postscript/pdfs/PLRM.pdf][PostScript Language Reference PDF document]] for more details.
 
 | category  | type        | executable | example                | spec               |
 |-----------+-------------+------------+------------------------+--------------------|
@@ -295,7 +282,7 @@ which are subject to change.
 |           | packedarray |            |                        | Level 2            |
 |           | string      | Y          | (hi) <a33f>            |                    |
 
-** Low level data types
+The following data types are implemented in WPS:
 
 | category  | type       | direct | literal | executable |
 |-----------+------------+--------+---------+------------|
@@ -310,7 +297,7 @@ which are subject to change.
 |           | dictionary | Y      | Y       | -          |
 |           | string     | Y      | Y       | -          |
 
-All types are represented directly in JavaScript except:
+All the above types are represented directly in JavaScript except:
 
 | type            | representation  |
 |-----------------+-----------------|
@@ -320,9 +307,15 @@ All types are represented directly in JavaScript except:
 | operator        | function        |
 | proc            | quoted array    |
 
-*** exec
+The interpreter needs to understand when to evaluate an argument.  The
+distinction between a "literal" and "executable" is the key.
 
-pop any, case:
+** Quoting and execution
+
+There are two important operators to control evaluation at the
+PostScript language level.
+
+The {{{ps(exec)}}} operator usually leaves the argument as is except:
 
 | type            | result            |
 |-----------------+-------------------|
@@ -330,9 +323,8 @@ pop any, case:
 | operator        | apply operator    |
 | proc            | exec each element |
 
-otherwise push the original value
-
-*** cvx
+The {{{ps(cvx)}}} operator makes the argument "executable".  Usually
+leaves the argument as is except:
 
 | from         | to              | how     |
 |--------------+-----------------+---------|
@@ -340,13 +332,16 @@ otherwise push the original value
 | array        | proc            | quote   |
 | string       | proc            | ~ parse |
 
-** Stack
-
-
+The ~ (tilde) character in the above table means that the
+functionality has not been implemented yet.
 
 * Drawing with PostScript
 
-Measuring angles:
+As a convention, operators beginning with dot are non-standard, low
+level operators which are subject to change.
+
+There is a difference in how HTML 5 canvas, PostScript and PDF measure
+angles:
 
 | language/device | unit |
 |-----------------+------|
@@ -354,7 +349,28 @@ Measuring angles:
 | PostScript      | deg  |
 | PDF             | rad  |
 
+Many of the examples below set up their bounding box using the
+=.gbox= operator, e.g.
+
+#+begin_src ps
+0 0 180 180 .gbox
+#+end_src
+
+Only the width and height of the canvas clipping rectangle are taken
+into account so far.  The width and height is related to the drawing
+units rather than to the size of the canvas element.
+
+Both PostScript and PDF documents have the origin of the coordinate
+system in the bottom left corner while HTML 5 canvas in the top left
+corner.  Thus, some of the following pictures are displayed upside
+down unless an explicit coordinate transformation was added.  This
+discrepancy between the origin of the coordinate system is a problem
+when drawing text because a simple coordinate transformation on its
+own would draw the text upside-down.
+
 ** Bowtie example
+
+See the [[https://developer.mozilla.org/en/drawing_graphics_with_canvas#section_6][original example]] in JavaScript.
 
 #+html: <canvas id="xbowtie"></canvas>
 #+html: <div id="bowtie">
@@ -366,23 +382,13 @@ wps($("xbowtie"), [$$("wps"), $$("bowtie")]);
 </script>
 #+end_html
 
-** Digital clock example
-
-#+html: <canvas id="xclock"></canvas>
-#+html: <div id="clock">
-#+include "clock.wps" src ps
-#+html: </div>
-#+begin_html
-<script>
-wps($("xclock"), [$$("wps"), $$("clock")]);
-</script>
-#+end_html
-
 ** Analog clock example
 
-#+html: <canvas id="xclock2"></canvas>
+See the [[http://oreilly.com/openbook/cgi/ch06_02.html][original example]].
 
 Click on the clock to start/stop it.
+
+#+html: <canvas id="xclock2"></canvas>
 
 #+html: <div id="clock2">
 #+include "clock2.wps" src ps
@@ -393,60 +399,16 @@ wps($("xclock2"), [$$("wps"), $$("clock2")]);
 </script>
 #+end_html
 
-** Tiger example
-
-Text drawing in canvas is not working in Firefox and Opera, works in
-Chrome.
-
-Firefox throws error about linecap and linejoin not being supported.
-However, it does not throw error about missing support for text
-drawing.
-
-#+plot: title:"tiger.eps drawing times" ind:1 deps:(2) type:2d with:histograms set:"yrange [0:]" set:"xlabel 'browser'" set:"ylabel 'time [s]'" set:"style histogram gap 1" file:"tiger.png" set:"term png size 400, 300"
-| browser | time [s] |
-|---------+----------|
-| Chrome  |      3.8 |
-| Opera   |     13.4 |
-| Firefox |     19.5 |
-
-file:tiger.png
-
-** Fern example
-
-from http://www.pvv.ntnu.no/~andersr/fractal/PostScript.html
-
-#+html: <canvas id="xfern"></canvas>
-
-#+html: <div id="fern">
-#+include "fern.wps" src ps
-#+html: </div>
-#+begin_html
-<script>
-//wps($("xfern"), [$$("wps"), $$("fern")]);
-</script>
-#+end_html
-
-** Tree example
-
-from http://www.pvv.ntnu.no/~andersr/fractal/PostScript.html
-
-#+html: <canvas id="xtree2"></canvas>
-
-#+html: <div id="tree2">
-#+include "tree2.ps" src ps
-#+html: </div>
-#+begin_html
-<script>
-//wps($("xtree2"), [$$("wps"), $$("tree2")]);
-</script>
-#+end_html
-
-** Other
-
-1 0 0 0 setcmykcolor    % 100% cyan \\
-0 0 1 0 setcmykcolor    % 100% yellow
+Running the clock keeps the CPU noticeably busy.  Chrome is best with
+very little overhead, followed by Opera, and Firefox significantly
+worse than the previous two browsers.  WPS seems to be fast enough for
+one-off drawings, but its usability when running the interpreter in a
+tight loop, depends on the efficiency of the host JavaScript
+interpreter.
 
 ** Fill example
+
+See the [[https://developer.mozilla.org/samples/canvas-tutorial/4_1_canvas_fillstyle.html][original example]] in JavaScript.
 
 #+html: <canvas id="xfill"></canvas>
 #+html: <div id="fill">
@@ -458,35 +420,107 @@ wps($("xfill"), [$$("wps"), $$("fill")]);
 </script>
 #+end_html
 
-** Chessboard example
+** Tiger example
 
-#+html: <canvas id="xchess"></canvas>
-#+html: <div id="chess">
-#+include "chess.eps" src ps
-#+html: </div>
+The [[http://svn.ghostscript.com/viewvc/trunk/gs/examples/tiger.eps?view=co][original example]] is included with [[http://ghostscript.com/][Ghostscript]].
+
 #+begin_html
-<div id="ychess" style="display:none">
-0 0 180 180 .gbox
-%1 0 0 -1 0 180 cm
-</div>
-<script>
-wps($("xchess"), [$$("wps"), $$("ychess"), $$("chess")]);
-</script>
+<canvas id="xtiger" style="width:283pt;height:369pt">
+</canvas>
+<p>Drawing took <span id="msg">--</span> seconds.</p>
 #+end_html
+
+#+html: <div id="tiger" style="display:none">
+#+html: <!-- TODO insert tiger.eps automatically -->
+#+html: </div>
+
+#+begin_html
+<div id="tiger1" style="display:none">
+0 0 567 739 .gbox
+1 0 0 -1 0 739 .transform
+/time1 .date (getTime) 0 .call def
+</div>
+
+<div id="tiger2" style="display:none">
+/time2 .date (getTime) 0 .call def
+(msg) .getElementById (textContent) time2 time1 sub 1000 div put
+</div>
+
+<script>
+function tiger() {wps($("xtiger"), [$$("wps"), $$("tiger1"), $$("tiger"), $$("tiger2")]);}
+</script>
+<button onclick="javascript:tiger();">Draw</button> the tiger (be patient).
+#+end_html
+
+Is this an interesting JavaScript and canvas benchmark?
+
+#+plot: title:"tiger.eps drawing times" ind:1 deps:(2 3 4) type:2d with:histograms set:"yrange [0:]" set:"xlabel 'browser'" set:"ylabel 'time [s]'" set:"style histogram gap 3" file:"tiger.png" set:"term png size 600, 300"
+| browser          | WPS time [s] | WPS time (no bind) [s] | PostCanvas time [s] |
+|------------------+--------------+------------------------+---------------------|
+| Chrome           |          2.5 |                    3.8 |                 1.6 |
+| Opera            |         15.9 |                   13.4 |                     |
+| Firefox 3.0      |         15.4 |                   19.5 |                 7.4 |
+| Firefox 3.5      |         11.6 |                        |                     |
+
+[[http://www.feiri.de/pcan/][PostCanvas]] runs this [[http://www.feiri.de/pcan/example1.html][example]] about 1.5 times (Chrome) to 2 times
+(Firefox) faster.  I am actually surprised that WPS runs only up to 2
+times slower even though it interprets almost everything with minimal
+number of operators coded directly in JavaScript (compared to
+PostCanvas which implements all operators directly in JavaScript).
+
+Another surprise to me is that I expected more significant speed up
+after implementing the {{{ps(bind)}}} operator.  Why does Opera get
+slower in this case?
+
+It should be fairly easy to speed up WPS by adding more operators
+implemented directly in JavaScript.  This could be done dynamically by
+redefining/rebinding existing operators to their optimized JavaScript
+version.  The speed of PostCanvas could probably be taken as the best
+case that could be achieved by optimizing WPS though.
+
+file:tiger.png
+
+Firefox throws error about linecap and linejoin not being supported so
+these were not used here.  Opera throws an error when running the
+PostCanvas example.  The tiger does not look the same as rendered by
+[[http://projects.gnome.org/evince/][Evince]] ([[http://poppler.freedesktop.org/][poppler]]/[[http://cairographics.org/][cairo]]) so maybe the linecap and linejoin are
+really needed to get proper image as intended.
+
+It is also interesting to observe that PDF operators and their names
+probably came up from shortening/compressing "user-space" PostScript
+operators in final PostScript files.  The tiger.eps file was created
+in 1990 and contains some "shortcuts" that match PDF operators
+standardised later.
 
 * Drawing with PDF
 
-PDF documents have the origin of the coordinate system in the bottom
-left corner while HTML 5 canvas int the top left corner.  Thus, some
-of the following pictures are displayed upside down (unless an
-explicit coordinate transformation was added which is not part of the
-visible example code).
+PDF is rather complex format.  WPS implements only drawing operators
+that can be present in PDF content streams.  The number of these
+operators is fixed and limited.  Even though the full PostScript
+language is not required, it can be convenient to implement them in
+PostScript.
+
+However, some aspects (e.g. colors) are handled differently in PDF
+compared to PostScript and these differences are not addressed by WPS.
+I imagine that a supporting server-side solution like [[http://logand.com/sw/ondoc/index.html][OnDoc]] would
+provide necessary data (e.g. decomposing PDF into pages and objects,
+providing HTML 5 web fonts and font metrics) and WPS would only draw
+preprocessed page content.
+
+Quoting from [[http://www.adobe.com/print/features/psvspdf/index.html][Adobe]]:
+
+#+begin_quote
+A PDF file is actually a PostScript file which has already been
+interpreted by a RIP and made into clearly defined objects.
+#+end_quote
 
 ** Heart example
 
+See also the [[https://developer.mozilla.org/samples/canvas-tutorial/2_6_canvas_beziercurveto.html][original example]] in JavaScript.
+
 #+html: <canvas id="xheart"></canvas>
 #+html: <div id="heart">
-#+include "heart.wpdf" src ps
+#+include "heart.wps" src ps
 #+html: </div>
 #+begin_html
 <script>
@@ -498,7 +532,7 @@ wps($("xheart"), [$$("wps"), $$("heart")]);
 
 #+html: <canvas id="xrect"></canvas>
 #+html: <div id="rect">
-#+include "rect.wpdf" src ps
+#+include "rect.wps" src ps
 #+html: </div>
 #+begin_html
 <script>
@@ -508,9 +542,11 @@ wps($("xrect"), [$$("wps"), $$("rect")]);
 
 ** Triangles example
 
+See also the [[https://developer.mozilla.org/samples/canvas-tutorial/2_3_canvas_lineto.html][original example]] in JavaScript.
+
 #+html: <canvas id="xtriangles"></canvas>
 #+html: <div id="triangles">
-#+include "triangles.wpdf" src ps
+#+include "triangles.wps" src ps
 #+html: </div>
 #+begin_html
 <script>
@@ -520,9 +556,11 @@ wps($("xtriangles"), [$$("wps"), $$("triangles")]);
 
 ** Smile example
 
+See also the [[http://developer.mozilla.org/samples/canvas-tutorial/2_2_canvas_moveto.html][original example]] in JavaScript.
+
 #+html: <canvas id="xsmile"></canvas>
 #+html: <div id="smile">
-#+include "smile.wpdf" src ps
+#+include "smile.wps" src ps
 #+html: </div>
 #+begin_html
 <script>
@@ -532,9 +570,11 @@ wps($("xsmile"), [$$("wps"), $$("smile")]);
 
 ** Star example
 
+See also the [[http://www.adobe.com/technology/pdfs/presentations/KingPDFTutorial.pdf][original PDF document]] where this example is presented.
+
 #+html: <canvas id="xstar"></canvas>
 #+html: <div id="star">
-#+include "star.wpdf" src ps
+#+include "star.wps" src ps
 #+html: </div>
 #+begin_html
 <script>
@@ -542,11 +582,27 @@ wps($("xstar"), [$$("wps"), $$("star")]);
 </script>
 #+end_html
 
-** Squares 2 example
+** Squares example
+
+See also the [[https://developer.mozilla.org/samples/canvas-tutorial/5_1_canvas_savestate.html][original example]] in JavaScript.
+
+#+html: <canvas id="xsquares"></canvas>
+#+html: <div id="squares">
+#+include "squares.wps" src ps
+#+html: </div>
+#+begin_html
+<script>
+wps($("xsquares"), [$$("wps"), $$("squares")]);
+</script>
+#+end_html
+
+** Two squares example
+
+See also the [[https://developer.mozilla.org/en/drawing_graphics_with_canvas][original example]] in JavaScript.
 
 #+html: <canvas id="xsquares2"></canvas>
 #+html: <div id="squares2">
-#+include "squares2.wpdf" src ps
+#+include "squares2.wps" src ps
 #+html: </div>
 #+begin_html
 <script>
@@ -554,313 +610,185 @@ wps($("xsquares2"), [$$("wps"), $$("squares2")]);
 </script>
 #+end_html
 
-** Junk
+* Operators and JavaScript bindings
 
-#+begin_html
-<pre>
+WPS implements a minimum core in JavaScript and the rest is
+implemented in PostScript itself.
 
-1 0 0 -1 0 446 cm % 0,0 in bottom left corner
-
-% Ex4
-
-q
-%BT
-%/F1 24 Tf
-%1 0 0 1 260 600 Tm
-%/CS1 cs 
-%63 127 127 sc
-%(Hello World)Tj
-%ET
-%100 0 127 sc
-%/CS2 CS
-%0 0 1 SC
-%315 572 m
-%299 528 l
-%339 554 l
-%291 554 l
-%331 528 l
-%b
-q
-0 255 255 rg
-4 0 0 4 315 550 cm
-0 5.5 m
--4 -5.5 l
- 6  1   l
--6  1   l
- 4 -5.5 l
-f
-Q
-%/CS1 cs
-%63 127 127 sc
-1 0 0 1 315 490 cm
-0 0 m
-  -7  23         -40   19     -15 -17   c
-  -7.5 -27.8   -11 -22       0 -35   c
-  11 -22        7.5 -27.8    15 -17    c
-  40  19          7    23        0   0 c
-b
-Q
-
-% http://developer.mozilla.org/samples/canvas-tutorial/2_5_canvas_quadraticcurveto.html
-
-%75 25 m
-%25 25 25 62 5 c2
-%25 100 50 100 c2
-%50 120 30 125 c2
-%60 120 65 100 c2
-%125 100 125 62.5 c2
-%125 25 75 25 c2
-%S
-
-%3 8 div 6 add .
-%6 3 8 div add .
-
-%8 7 3 mul sub .
-%7 3 mul 8 exch sub .
-
-/box {
-  0 0 m
-  72 0 l
-  0 72 l
-  -72 0 l
-  h f
-} def
-
-1 0 0 1 -452 124 cm
-box
-0 setgray fill
-1 0 0 1 27.0 36.0 cm
-box
-.4 setgray fill
-1 0 0 1 28.8 39.6 cm
-box
-.8 setgray fill
-
-% TODO not, and, or, xor
-% TODO for loop exit
-</pre>
-#+end_html
-
-/MediaBox [0 0 612 446]
-
-#+begin_html
-<script>
-function xreq(Url, Cb, Er) {
-//   var req = new XMLHttpRequest();
-//   alert(Url);
-//   req.open('GET', Url, true);
-//   req.onreadystatechange = function (e) {
-//      if(req.readyState == 4) {
-//         if(req.status == 200) Cb(req.responseText);
-//         else if(Er) Er();
-//      }
-//   };
-//   req.send(null);
-
-   try {netscape.security.PrivilegeManager.enablePriviledge(priviledge);}
-   catch(e) {}
-   var req = new XMLHttpRequest();
-   req.open('GET', Url, false); 
-   req.send(null);
-   if(req.status == 200) Cb(req.responseText);
-   else alert("uff");
-}
-</script>
-#+end_html
-
-#+html: <canvas id="c"></canvas>
-
-[[http://svn.ghostscript.com/viewvc/trunk/gs/examples/tiger.eps?view=co][tiger.eps]]:
-#+html: <button onclick="javascript:xreq('http://svn.ghostscript.com/viewvc/trunk/gs/examples/tiger.eps?view=co', wps)">Draw</button>
-#+html: <button onclick="javascript:xreq('file:///home/tomas/src/pdf4web/tiger.eps', alert)">Draw</button>
-
-* JavaScript bindings
-
-http://www.whatwg.org/specs/web-apps/current-work/#the-canvas-element
-
-??? rlineto rmoveto findfont scalefont setfont show rightshow
-stringwidth arcn loop/exit forall cvs array put get length aload
-astore mark ashow widthshow awidthshow kshow currentpoint makefont
-charpath setdash image putinterval dict begin settransfer
-readhexstring flattenpath curveto pathbbox pathforall search transform
-itransform definefont setrgbcolor setcharwidth
-
- setmatrix
-
-octal chars in string \234
-
-
-/Times-Roman findfont typography 15 scalefont setfont
+Many JavaScript data types map quite easily to PostScript data types
+so native bindings can be implemented mostly in PostScript via
+PostScript dictionaries.  [[http://www.whatwg.org/specs/web-apps/current-work/#the-canvas-element][HTML 5 canvas API]] bindings are quite
+straightforward.  Probably the trickiest bit is implementing callbacks
+to handle [[http://en.wikipedia.org/wiki/Document_Object_Model][DOM]] events using PostScript code.
 
 ** Built-in operators
 
-| category       | in                      | operator | out                                                         |
-|----------------+-------------------------+----------+-------------------------------------------------------------|
-| Trivial        |                         | true     | true                                                        |
-|                |                         | false    | false                                                       |
-|                |                         | null     | null                                                        |
-| Math           | x                       | neg      | -x                                                          |
-|                | x y                     | add      | x+y                                                         |
-|                | x y                     | mul      | x*y                                                         |
-|                | x y                     | div      | x/y                                                         |
-|                | x y                     | mod      | x%y                                                         |
-| Stack          |                         | mark     | mark                                                        |
-|                | x y                     | exch     | y x                                                         |
-|                |                         | clear    |                                                             |
-|                | x                       | pop      |                                                             |
-|                | any_n ...any_0 n        | index    | any_n ... any_0 any_n                                       |
-|                | any_(n-1) ... any_0 n j | roll     | any_((j-1) mod n) ... any_0 ... any_(n-1) ... any_(j mod n) |
-|                | any_1 ... any_n n       | copy     | any_1 ... any_n any_1 ... any_n                             |
-| Array          | array                   | length   | n                                                           |
-| Conditionals   | x y                     | eq       | bool                                                        |
-|                | x y                     | lt       | bool                                                        |
-|                | y                       | not      | bool                                                        |
-|                | x y                     | and      | z                                                           |
-|                | x y                     | or       | z                                                           |
-|                | bool then else          | ifelse   |                                                             |
-|                | n proc                  | repeat   |                                                             |
-|                | i j k proc              | for      |                                                             |
-| Debugging      | x                       | .        |                                                             |
-|                |                         | pstack   |                                                             |
-| Dictionaries   | n                       | dict     | dict                                                        |
-|                | dict key                | get      | any                                                         |
-|                | dict key any            | put      |                                                             |
-|                | sym proc                | def      |                                                             |
-| Arrays         | n                       | array    | array                                                       |
-| JavaScript FFI | dict key nargs          | .call    | any                                                         |
-|                |                         | .gc      | gc                                                          |
-|                |                         | .math    | Math                                                        |
-| HTML 5         | r g b                   | .rgb     | text                                                        |
-|                | r g b a                 | .rgba    | text                                                        |
+| category       | in                      | operator         | out                                                         |
+|----------------+-------------------------+------------------+-------------------------------------------------------------|
+| Trivial        |                         | {{{ps(true)}}}   | true                                                        |
+|                |                         | {{{ps(false)}}}  | false                                                       |
+|                |                         | {{{ps(null)}}}   | null                                                        |
+| Math           | x                       | {{{ps(neg)}}}    | -x                                                          |
+|                | x y                     | {{{ps(add)}}}    | x+y                                                         |
+|                | x y                     | {{{ps(mul)}}}    | x*y                                                         |
+|                | x y                     | {{{ps(div)}}}    | x/y                                                         |
+|                | x y                     | {{{ps(mod)}}}    | x%y                                                         |
+| Stack          |                         | {{{ps(mark)}}}   | mark                                                        |
+|                | x y                     | {{{ps(exch)}}}   | y x                                                         |
+|                |                         | {{{ps(clear)}}}  |                                                             |
+|                | x                       | {{{ps(pop)}}}    |                                                             |
+|                | any_n ...any_0 n        | {{{ps(index)}}}  | any_n ... any_0 any_n                                       |
+|                | any_(n-1) ... any_0 n j | {{{ps(roll)}}}   | any_((j-1) mod n) ... any_0 ... any_(n-1) ... any_(j mod n) |
+|                | any_1 ... any_n n       | {{{ps(copy)}}}   | any_1 ... any_n any_1 ... any_n                             |
+| Array          | array                   | {{{ps(length)}}} | n                                                           |
+| Conditionals   | x y                     | {{{ps(eq)}}}     | bool                                                        |
+|                | x y                     | {{{ps(lt)}}}     | bool                                                        |
+|                | y                       | {{{ps(not)}}}    | bool                                                        |
+|                | x y                     | {{{ps(and)}}}    | z                                                           |
+|                | x y                     | {{{ps(or)}}}     | z                                                           |
+|                | bool then else          | {{{ps(ifelse)}}} |                                                             |
+|                | n proc                  | {{{ps(repeat)}}} |                                                             |
+|                | i j k proc              | {{{ps(for)}}}    |                                                             |
+| Debugging      | x                       | {{{ps(=)}}}      |                                                             |
+|                |                         | {{{ps(pstack)}}} |                                                             |
+| Dictionaries   | n                       | {{{ps(dict)}}}   | dict                                                        |
+|                | dict key                | {{{ps(get)}}}    | any                                                         |
+|                | dict key any            | {{{ps(put)}}}    |                                                             |
+|                | sym proc                | {{{ps(def)}}}    |                                                             |
+| Arrays         | n                       | {{{ps(array)}}}  | array                                                       |
+| JavaScript FFI | dict key nargs          | .call            | any                                                         |
+|                |                         | .gc              | gc                                                          |
+|                |                         | .math            | Math                                                        |
+| HTML 5         | r g b                   | .rgb             | text                                                        |
+|                | r g b a                 | .rgba            | text                                                        |
+
+Some of the above operators could be implemented in PostScript instead
+of directly in JavaScript.
 
 ** Core operators
 
-| category     | in          | operator    | out    |
-|--------------+-------------+-------------+--------|
-| Math         |             | abs         |        |
-|              |             | .acos       |        |
-|              |             | .asin       |        |
-|              |             | atan        |        |
-|              |             | .atan2      |        |
-|              |             | ceiling     |        |
-|              |             | cos         |        |
-|              |             | .exp        |        |
-|              |             | floor       |        |
-|              |             | log         |        |
-|              |             | .max        |        |
-|              |             | .min        |        |
-|              |             | .pow        |        |
-|              |             | .random     |        |
-|              |             | rand        |        |
-|              |             | round       |        |
-|              |             | sin         |        |
-|              |             | sqrt        |        |
-|              |             | .tan        |        |
-|              |             | truncate    |        |
-|              |             | .e          |        |
-|              |             | .ln2        |        |
-|              |             | .ln10       |        |
-|              |             | .log2e      |        |
-|              |             | .log10e     |        |
-|              |             | .pi         |        |
-|              |             | .sqrt1_2    |        |
-|              |             | .sqrt2      |        |
-|              |             | sub         |        |
-|              |             | idiv        |        |
-| Stack        | x           | dup         | x x    |
-| Conditionals | x y         | ne          | bool   |
-|              | x y         | ge          | bool   |
-|              | x y         | le          | bool   |
-|              | x y         | gt          | bool   |
-|              | bool proc   | if          |        |
-| HTML 5       | key         | .gget       |        |
-|              | any key     | .gput       |        |
-|              | key nargs   | .gcall0     |        |
-|              | key nargs   | .gcall1     |        |
-|              |             | .gcanvas    | canvas |
-|              | w h         | .gdim       |        |
-|              | x0 y0 x1 y1 | .gbox       |        |
-| PostScript   | gray        | setgray     |        |
-|              | r g b       | setrgbcolor |        |
-|              | ???         | setfont ?   |        |
-|              |             | clippath ?  |        |
-|              | text        | show ?      |        |
-|              | x y         | rlineto     |        |
+| category     | in          | operator              | out    |
+|--------------+-------------+-----------------------+--------|
+| Math         |             | {{{ps(abs)}}}         |        |
+|              |             | .acos                 |        |
+|              |             | .asin                 |        |
+|              |             | {{{ps(atan)}}}        |        |
+|              |             | .atan2                |        |
+|              |             | {{{ps(ceiling)}}}     |        |
+|              |             | {{{ps(cos)}}}         |        |
+|              |             | .exp                  |        |
+|              |             | {{{ps(floor)}}}       |        |
+|              |             | {{{ps(log)}}}         |        |
+|              |             | .max                  |        |
+|              |             | .min                  |        |
+|              |             | .pow                  |        |
+|              |             | .random               |        |
+|              |             | {{{ps(rand)}}}        |        |
+|              |             | {{{ps(round)}}}       |        |
+|              |             | {{{ps(sin)}}}         |        |
+|              |             | {{{ps(sqrt)}}}        |        |
+|              |             | .tan                  |        |
+|              |             | {{{ps(truncate)}}}    |        |
+|              |             | .e                    |        |
+|              |             | .ln2                  |        |
+|              |             | .ln10                 |        |
+|              |             | .log2e                |        |
+|              |             | .log10e               |        |
+|              |             | .pi                   |        |
+|              |             | .sqrt1_2              |        |
+|              |             | .sqrt2                |        |
+|              |             | {{{ps(sub)}}}         |        |
+|              |             | {{{ps(idiv)}}}        |        |
+| Stack        | x           | {{{ps(dup)}}}         | x x    |
+| Conditionals | x y         | {{{ps(ne)}}}          | bool   |
+|              | x y         | {{{ps(ge)}}}          | bool   |
+|              | x y         | {{{ps(le)}}}          | bool   |
+|              | x y         | {{{ps(gt)}}}          | bool   |
+|              | bool proc   | {{{ps(if)}}}          |        |
+| HTML 5       | key         | .gget                 |        |
+|              | any key     | .gput                 |        |
+|              | key nargs   | .gcall0               |        |
+|              | key nargs   | .gcall1               |        |
+|              |             | .gcanvas              | canvas |
+|              | w h         | .gdim                 |        |
+|              | x0 y0 x1 y1 | .gbox                 |        |
 
-** Canvas methods
+** HTML 5 canvas methods and attributes
 
-|   | in                                           | canvas                | out            | ps         | pdf         |
-|---+----------------------------------------------+-----------------------+----------------+------------+-------------|
-| / |                                              |                       |                | <          | <           |
-|   |                                              | .save                 |                | gsave      | q           |
-|   |                                              | .restore              |                | grestore   | Q           |
-|   | x y                                          | scale                 |                | scale      | -           |
-|   | angle                                        | rotate                |                | rotate     | -           |
-|   | x y                                          | translate             |                | translate  | -           |
-|   | m11 m12 m21 m22 dx dy                        | .transform            |                | -          | cm          |
-|   | m11 m12 m21 m22 dx dy                        | .setTransform         |                | -          | -           |
-|   | x0 y0 x1 y1                                  | .createLinearGradient | canvasGradient |            |             |
-|   | x0 y0 r0 x1 y1 r1                            | .createRadialGradient | canvasGradient |            |             |
-|   | image repetition                             | .createPattern        | canvasPattern  |            |             |
-|   | x y w h                                      | .clearRect            |                | rectclip   |             |
-|   | x y w h                                      | .fillRect             |                | rectfill   |             |
-|   | x y w h                                      | .strokeRect           |                | rectstroke |             |
-|   |                                              | .beginPath            |                | newpath    | m ?         |
-|   |                                              | .closePath            |                | closepath  | ~ h ? ~ n ? |
-|   | x y                                          | .moveTo               |                | moveto     | m ?         |
-|   | x y                                          | .lineTo               |                | lineto     | l           |
-|   | cpx cpy x y                                  | .quadraticCurveTo     |                |            |             |
-|   | cp1x cp1y cp2x cp2y x y                      | .bezierCurveTo        |                |            | c           |
-|   | x1 y1 x2 y2 radius                           | .arcTo                |                | arcto      |             |
-|   | x y w h                                      | .rect                 |                | -          | ~ re        |
-|   | x y radius startAngle endAngle anticlockwise | .arc                  |                | ~ arc      |             |
-|   |                                              | fill                  |                | fill       | ~ f ?       |
-|   |                                              | stroke                |                | stroke     | S           |
-|   |                                              | clip                  |                | clip       | ~ W ?       |
-|   | x y                                          | .isPointInPath        | boolean        |            |             |
-|   | text x y                                     | .fillText1            |                |            |             |
-|   | text x y maxWidth                            | .fillText2            |                |            |             |
-|   | text x y                                     | .strokeText1          |                |            |             |
-|   | text x y maxWidth                            | .strokeText2          |                |            |             |
-|   | text                                         | .measureText          | textMetrics    |            |             |
-|   | image dx dy                                  | .drawImage1           |                |            |             |
-|   | image dx dy dw dh                            | .drawImage2           |                |            |             |
-|   | image sx sy sw sh dx dy dw dh                | .drawImage3           |                |            |             |
-|   | imagedata                                    | .createImageData1     | imageData      |            |             |
-|   | sw sh                                        | .createImageData1     | imageData      |            |             |
-|   | sx sy sw sh                                  | .getImageData         | imageData      |            |             |
-|   | imagedata dx dy                              | .putImageData1        |                |            |             |
-|   | imagedata dx dy dirtyX dirtyY dirtyW dirtyH  | .putImageData2        |                |            |             |
+*** Canvas methods
 
-** Canvas attributes
+|   | in                                           | canvas                | out            | ps                             | pdf         |
+|---+----------------------------------------------+-----------------------+----------------+--------------------------------+-------------|
+| / |                                              |                       |                | <                              | <           |
+|   |                                              | .save                 |                | {{{ps(gsave)}}}                | q           |
+|   |                                              | .restore              |                | {{{ps(grestore)}}}             | Q           |
+|   | x y                                          | .scale                |                | {{{ps(scale)}}}                | -           |
+|   | angle                                        | .rotate               |                | {{{ps(rotate)}}}               | -           |
+|   | x y                                          | .translate            |                | {{{ps(translate)}}}            | -           |
+|   | m11 m12 m21 m22 dx dy                        | .transform            |                | -                              | cm          |
+|   | m11 m12 m21 m22 dx dy                        | .setTransform         |                | -                              | -           |
+|   | x0 y0 x1 y1                                  | .createLinearGradient | canvasGradient |                                |             |
+|   | x0 y0 r0 x1 y1 r1                            | .createRadialGradient | canvasGradient |                                |             |
+|   | image repetition                             | .createPattern        | canvasPattern  |                                |             |
+|   | x y w h                                      | .clearRect            |                | {{{ps(rectclip)}}}             |             |
+|   | x y w h                                      | .fillRect             |                | {{{ps(rectfill)}}}             |             |
+|   | x y w h                                      | .strokeRect           |                | {{{ps(rectstroke)}}}           |             |
+|   |                                              | .beginPath            |                | {{{ps(newpath)}}}              | m ?         |
+|   |                                              | .closePath            |                | {{{ps(closepath)}}}            | ~ h ? ~ n ? |
+|   | x y                                          | .moveTo               |                | {{{ps(moveto)}}}               | m ?         |
+|   | x y                                          | .lineTo               |                | {{{ps(lineto)}}}               | l           |
+|   | cpx cpy x y                                  | .quadraticCurveTo     |                |                                |             |
+|   | cp1x cp1y cp2x cp2y x y                      | .bezierCurveTo        |                |                                | c           |
+|   | x1 y1 x2 y2 radius                           | .arcTo                |                | {{{ps(arcto)}}}                |             |
+|   | x y w h                                      | .rect                 |                | -                              | ~ re        |
+|   | x y radius startAngle endAngle anticlockwise | .arc                  |                | ~ {{{ps(arc)}}} {{{ps(arcn)}}} |             |
+|   |                                              | .fill                 |                | {{{ps(fill)}}}                 | ~ f ?       |
+|   |                                              | .stroke               |                | {{{ps(stroke)}}}               | S           |
+|   |                                              | .clip                 |                | {{{ps(clip)}}}                 | ~ W ?       |
+|   | x y                                          | .isPointInPath        | boolean        |                                |             |
+|   | text x y                                     | .fillText1            |                |                                |             |
+|   | text x y maxWidth                            | .fillText2            |                |                                |             |
+|   | text x y                                     | .strokeText1          |                |                                |             |
+|   | text x y maxWidth                            | .strokeText2          |                |                                |             |
+|   | text                                         | .measureText          | textMetrics    |                                |             |
+|   | image dx dy                                  | .drawImage1           |                |                                |             |
+|   | image dx dy dw dh                            | .drawImage2           |                |                                |             |
+|   | image sx sy sw sh dx dy dw dh                | .drawImage3           |                |                                |             |
+|   | imagedata                                    | .createImageData1     | imageData      |                                |             |
+|   | sw sh                                        | .createImageData1     | imageData      |                                |             |
+|   | sx sy sw sh                                  | .getImageData         | imageData      |                                |             |
+|   | imagedata dx dy                              | .putImageData1        |                |                                |             |
+|   | imagedata dx dy dirtyX dirtyY dirtyW dirtyH  | .putImageData2        |                |                                |             |
 
-|   | type | attribute                 | values                                             | ps            | pdf   |
-|---+------+---------------------------+----------------------------------------------------+---------------+-------|
-| / |      | <                         |                                                    | <             | <     |
-|   | num  | .globalAlpha              | (1.0)                                              |               |       |
-|   | str  | .globalCompositeOperation | (source-over)                                      |               |       |
-|   | any  | .strokeStyle              | (black)                                            | ~ setdash ?   | ~ d ? |
-|   | any  | .fillStyle                | (black)                                            |               |       |
-|   | num  | .lineWidth                | (1)                                                | setlinewidth  | w     |
-|   | str  | .lineCap                  | (butt) round square                                | ~ setlinecap  | J     |
-|   | str  | .lineJoin                 | round bevel (miter)                                | ~ setlinejoin | j     |
-|   | num  | .miterLimit               | (10)                                               | setmiterlimit | M     |
-|   | num  | .shadowOffsetX            | (0)                                                |               |       |
-|   | num  | .shadowOffsetY            | (0)                                                |               |       |
-|   | num  | .shadowBlur               | (0)                                                |               |       |
-|   | str  | .shadowColor              | (transparent black)                                |               |       |
-|   | str  | .font                     | (10px sans-serif)                                  |               |       |
-|   | str  | .textAlign                | (start) end left right center                      |               |       |
-|   | str  | .textBaseline             | top hanging middle (alphabetic) ideographic bottom |               |       |
+*** Canvas attributes
 
-** Other operators
+|   | type | attribute                 | values                                             | ps                      | pdf   |
+|---+------+---------------------------+----------------------------------------------------+-------------------------+-------|
+| / |      | <                         |                                                    | <                       | <     |
+|   | num  | .globalAlpha              | (1.0)                                              |                         |       |
+|   | str  | .globalCompositeOperation | (source-over)                                      |                         |       |
+|   | any  | .strokeStyle              | (black)                                            | ~ {{{ps(setdash)}}} ?   | ~ d ? |
+|   | any  | .fillStyle                | (black)                                            |                         |       |
+|   | num  | .lineWidth                | (1)                                                | {{{ps(setlinewidth)}}}  | w     |
+|   | str  | .lineCap                  | (butt) round square                                | ~ {{{ps(setlinecap)}}}  | J     |
+|   | str  | .lineJoin                 | round bevel (miter)                                | ~ {{{ps(setlinejoin)}}} | j     |
+|   | num  | .miterLimit               | (10)                                               | {{{ps(setmiterlimit)}}} | M     |
+|   | num  | .shadowOffsetX            | (0)                                                |                         |       |
+|   | num  | .shadowOffsetY            | (0)                                                |                         |       |
+|   | num  | .shadowBlur               | (0)                                                |                         |       |
+|   | str  | .shadowColor              | (transparent black)                                |                         |       |
+|   | str  | .font                     | (10px sans-serif)                                  |                         |       |
+|   | str  | .textAlign                | (start) end left right center                      |                         |       |
+|   | str  | .textBaseline             | top hanging middle (alphabetic) ideographic bottom |                         |       |
 
-|   | canvas                                      | ps | pdf |
-|---+---------------------------------------------+----+-----|
-| / | <                                           |    |     |
-|   | canvasGradient offset color *.addColorStop* |    |     |
+*** Other operators
 
-** Other attributes
+|   | in                          | canvas        | out | ps | pdf |
+|---+-----------------------------+---------------+-----+----+-----|
+| / |                             | <             |     |    |     |
+|   | canvasGradient offset color | .addColorStop |     |    |     |
+
+*** Other attributes
 
 |   | dict             | type             | attribute | values | ps | pdf |
 |---+------------------+------------------+-----------+--------+----+-----|
@@ -871,15 +799,21 @@ octal chars in string \234
 |   | imageData        | canvasPixelArray | data      |        |    |     |
 |   | canvasPixelArray | cnt              | length    |        |    |     |
 
-[IndexGetter, IndexSetter] CanvasPixelArray
+TODO [IndexGetter, IndexSetter] CanvasPixelArray
 
 ** PostScript operators
 
-|   | category | in      | operator   | out |
-|---+----------+---------+------------+-----|
-| / |          | <       | <          | <   |
-|   |          | x y [m] | transform  | x y |
-|   |          | x y [m] | itransform | x y |
+|   | category | in      | operator              | out |
+|---+----------+---------+-----------------------+-----|
+| / |          | <       | <                     | <   |
+|   |          | x y [m] | {{{ps(transform)}}}   | x y |
+|   |          | x y [m] | {{{ps(itransform)}}}  | x y |
+|   |          | gray    | {{{ps(setgray)}}}     |     |
+|   |          | r g b   | {{{ps(setrgbcolor)}}} |     |
+|   |          | ???     | {{{ps(setfont)}}} ?   |     |
+|   |          |         | {{{ps(clippath)}}} ?  |     |
+|   |          | text    | {{{ps(show)}}} ?      |     |
+|   |          | x y     | {{{ps(rlineto)}}}     |     |
 
 ** PDF operators
 
@@ -891,33 +825,33 @@ octal chars in string \234
 |   |                        | j        | ~ setlinejoin                                             |
 |   |                        | M        | setmiterlimit                                             |
 |   |                        | d        | ~ setdash ?                                               |
-|   |                        | ri       | {SetColorRenderingIntent}                                 |
-|   |                        | i        | {1 .min setflat}                                          |
-|   |                        | gs       | {SetExtGState}                                            |
+|   |                        | ri       |                                                           |
+|   |                        | i        | ~ {1 .min setflat}                                        |
+|   |                        | gs       |                                                           |
 |   | Special graphics state | q        | gsave                                                     |
 |   |                        | Q        | grestore                                                  |
-|   |                        | cm       | .transform   { //TempMatrix astore concat }               |
+|   |                        | cm       | .transform                                                |
 |   | Path construction      | m        | moveto                                                    |
 |   |                        | l        | lineto                                                    |
 |   |                        | c        | .bezierCurveTo (curveto)                                  |
-|   |                        | v        | ! currentpoint cp2 p3 c { currentpoint 6 2 roll curveto } |
-|   |                        | y        | ! cp1 p3 p3 c { 2 copy curveto }                          |
+|   |                        | v        | ! currentpoint cp2 p3 c {currentpoint 6 2 roll curveto}   |
+|   |                        | y        | ! cp1 p3 p3 c {2 copy curveto}                            |
 |   |                        | h        | closepath                                                 |
 |   |                        | re       | ! x y m , x+w y l , x+w y+h l , x y+h l , h               |
 |   | Path painting          | S        | stroke                                                    |
 |   |                        | s        | h S                                                       |
 |   |                        | f        | (fill)                                                    |
 |   |                        | F        | f                                                         |
-|   |                        | f*       | {eofill}                                                  |
-|   |                        | B        | f S { gsave fill grestore stroke }                        |
-|   |                        | B*       | f* S { gsave eofill grestore stroke }                     |
-|   |                        | b        | h b { closepath gsave fill grestore stroke }              |
-|   |                        | b*       | h B* { closepath gsave eofill grestore stroke }           |
-|   |                        | n        | {newpath}                                                 |
+|   |                        | f*       | eofill                                                    |
+|   |                        | B        | f S ! {gsave fill grestore stroke}                        |
+|   |                        | B*       | f* S ! {gsave eofill grestore stroke}                     |
+|   |                        | b        | h b ! {closepath gsave fill grestore stroke}              |
+|   |                        | b*       | h B* ! {closepath gsave eofill grestore stroke}           |
+|   |                        | n        | ~ newpath                                                 |
 |   | Clipping paths         | W        | clip                                                      |
-|   |                        | W*       | {eoclip}                                                  |
+|   |                        | W*       | eoclip                                                    |
 |   | Text objects           | BT       |                                                           |
-|   |                        | ET       | {grestore}                                                |
+|   |                        | ET       | ~ grestore                                                |
 |   | Text state             | Tc       |                                                           |
 |   |                        | Tw       |                                                           |
 |   |                        | Tz       |                                                           |
@@ -933,8 +867,8 @@ octal chars in string \234
 |   |                        | TJ       |                                                           |
 |   |                        | '        |                                                           |
 |   |                        | "        |                                                           |
-|   | Type 3 fonts           | d0       | setcharwidth                                                          |
-|   |                        | d1       | setcachedevice                                                          |
+|   | Type 3 fonts           | d0       | setcharwidth                                              |
+|   |                        | d1       | setcachedevice                                            |
 |   | Color                  | CS       |                                                           |
 |   |                        | cs       |                                                           |
 |   |                        | SC       |                                                           |
@@ -946,7 +880,7 @@ octal chars in string \234
 |   |                        | RG       | rg                                                        |
 |   |                        | rg       | setrgbcolor                                               |
 |   |                        | K        | k                                                         |
-|   |                        | k        | setcmykcolor                                                          |
+|   |                        | k        | setcmykcolor                                              |
 |   | Shading patterns       | sh       |                                                           |
 |   | Inline images          | BI       |                                                           |
 |   |                        | ID       |                                                           |
@@ -960,94 +894,39 @@ octal chars in string \234
 |   | Compatibility          | BX       |                                                           |
 |   |                        | EX       |                                                           |
 
+* Supported Browsers
+
+I have tried the following browsers so far:
+
+|   | Browser | Version    | Note                               |
+|---+---------+------------+------------------------------------|
+| / |         | <          |                                    |
+|   | Firefox | 3.0.11     | no text drawing, linecap, linejoin |
+|   | Firefox | 3.5b4pre   | no text drawing, linecap, linejoin |
+|   | Opera   | 10.00 Beta | no text drawing, ugly aliasing     |
+|   | Chrome  | 3.0.189.0  | arc drawing looks partially broken |
+
+If you are using a different browser, please [[http://logand.com/contact.html][let me know]] if it works
+for you.
+
+* Limitations and Known Issues 
+
+- many PostScript operators are still to be implemented
+- only small fraction of PDF operators has been implemented
+- text drawing and font related functionality has not been implemented
+
+* Changes
+
+2009-06-30 v0.1
+
+- Initial version
+
 * References
 
-** PostScript in JavaScript by others
+[[http://www.feiri.de/pcan/][PostCanvas]] is a RPN interpreter with many PostScript operators
+implemented directly in JavaScript.  It is faster than WPS but not a
+"real" PostScript.
 
-Somebody before: http://www.feiri.de/pcan/ RPN calculator with many
-PostScript operators implemented directly in JavaScript.  Fast drawing
-but not "real" PostScript.
+[[http://svgkit.sourceforge.net/][SVGKit]] has a PostScript interpreter on the wish list.
 
-Wish list: http://svgkit.sourceforge.net/
-
-** Interesting PostScript applications
-
-http://starynkevitch.net/Basile/NeWS_descr_oct_1993.html \\
-http://www.art.net/studios/Hackers/Hopkins/Don/hyperlook/index.html \\
-http://books.google.com/books?id=xHSoK66z34YC&pg=PA193 \\
-http://www.art.net/studios/Hackers/Hopkins/Don/lang/NeWS.html \\
-http://en.wikipedia.org/wiki/Display_PostScript
-
-** Mess
-
-http://canvaspaint.org/blog/2006/12/rendering-text/ \\
-http://dev.opera.com/articles/view/html-5-canvas-the-basics/ \\
-http://www.benjoffe.com/code/ \\
-http://arapehlivanian.com/wp-content/uploads/2007/02/canvas.html
-
-http://two.pairlist.net/pipermail/reportlab-users/2002-September/000599.html
-
-http://www.capcode.de/help/put ref \\
-http://www.math.ubc.ca/~cass/courses/ps.html ps operator summary \\
-http://atrey.karlin.mff.cuni.cz/~milanek/PostScript/Reference/PSL2d.html \\
-http://gauss.upf.es/www-storage/PS_Guide-1.0/operators.html \\
-http://web.mit.edu/ghostscript/www/Language.htm \\
-http://pages.cs.wisc.edu/~ghost/doc/gnu/7.05/Ps-style.htm \\
-http://www.tailrecursive.org/postscript/operators.html \\
-
-http://www.math.ubc.ca/~cass/courses/m308-7b/ch5.pdf
-
-http://en.wikibooks.org/wiki/PostScript_FAQ
-
-: http://www.nihilogic.dk/labs/canvas_sheet/HTML5_Canvas_Cheat_Sheet.png
-
-http://dev.opera.com/articles/view/creating-pseudo-3d-games-with-html-5-can-1/
-
-http://dev.opera.com/articles/view/html-5-canvas-the-basics/
-
-js closure over value, not var!
-
-http://www.pvv.ntnu.no/~andersr/fractal/PostScript.html
-http://www.cs.unh.edu/~charpov/Programming/L-systems/
-http://www.cs.unh.edu/~charpov/Programming/PostScript-primes/
-
-http://www.adobe.com/print/features/psvspdf/index.html
-
-   A PDF file is actually a PostScript file which has already been
-   interpreted by a RIP and made into clearly defined objects.
-
-http://c2.com/cgi/wiki?PortableDocumentFormat
-
-   Unfortunately, Adobe have a history of making needlessly
-   incompatible changes to the PDF format. It's not quite as bad as
-   PostScript in terms of the number of broken documents out there,
-   but it's definitely not a stable format.
-
-hate pdf http://www.useit.com/alertbox/20030714.html
-
-* Ideas
-
-do better than http://processingjs.org/ http://processingjs.org/reference
-
-try 3d interface in chrome
-
-reactive programming http://conal.net/fran/tutorial.htm
-
-
-* LINKS
-
-http://www.math.ubc.ca/~cass/graphics/manual/
-
-http://www.anastigmatix.net/postscript/MetaPre.html
-
-http://svn.ghostscript.com/ghostscript/branches/icc_work/psi/estack.h
-
-https://dev.mobileread.com/trac/iliados/browser/upstream/poppler/test/pdf-operators.c
-
-http://developer.apple.com/documentation/GraphicsImaging/Conceptual/drawingwithquartz2d/dq_paths/dq_paths.html#//apple_ref/doc/uid/TP30001066-CH211-DontLinkElementID_10
-
-http://easyweb.easynet.co.uk/~mrmeanie/matrix/matrices.htm
-
-https://developer.mozilla.org/samples/canvas-tutorial/6_2_canvas_clipping.html
-
-https://developer.mozilla.org/samples/canvas-tutorial/5_2_canvas_translate.html
+Postscript is a registered trademark of [[http://www.adobe.com][Adobe Systems Incorporated]].
