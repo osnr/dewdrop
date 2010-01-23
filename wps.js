@@ -1,5 +1,3 @@
-// TODO one run, exec function or name !quoted
-
 function isQuoted(V) {
   return V.q;
 }
@@ -39,7 +37,7 @@ function inDs(Ds, K) {
   return false;
 }
 
-function ps0(L, Os, Ds) { // TODO Nd name dict name=>sym?
+function ps0(L, Os, Ds, Es) { // TODO Nd name dict name=>sym?
   var N = L.length;
   var I = 0;
 
@@ -97,7 +95,7 @@ function ps0(L, Os, Ds) { // TODO Nd name dict name=>sym?
     // TODO 1e10 1E-5 real numbers
     // TODO radix numbers 8#1777 16#FFFE 2#1000
     var C = xchar();
-    if(member(C, "()<>/% \t\n")) throw "Symbol expected";
+    if(member(C, "()<>/% \t\n")) throw "Symbol expected, got " + C;
     var N = member(C, "+-0123456789.");
     var F = "." == C;
     var L = [C];
@@ -118,7 +116,7 @@ function ps0(L, Os, Ds) { // TODO Nd name dict name=>sym?
 
   function token() {
     skip();
-    switch(peek()) { // TODO read dict in <> <~~> <<>>
+    switch(peek()) { // TODO read dict in <> <~~> <<>> immediate literal //
       case false: return undefined;
       case "%": return comment();
       case "[": return new Symbol(xchar());
@@ -127,59 +125,72 @@ function ps0(L, Os, Ds) { // TODO Nd name dict name=>sym?
       case "}": D--; return new Symbol(xchar());
       case "/": xchar(); var X = symbol(); return quote(X);
       case "(": return text();
+      case "<":
+        xchar();
+        if("<" != peek()) throw "Encoded strings not implemented yet";
+        xchar();
+        return new Symbol("<<");
+      case ">":
+        xchar();
+        if(">" != peek()) throw "Unexpected >";
+        xchar();
+        return new Symbol(">>");
       default: return symbol();
     }
   }
 
-//   var Es = [];
+  function Xexec() {Es.push([false, Os.pop()]);};
 
-  function exec() {
-    var X = Os.pop();
+  function run(X, Z) {
     if(isSymbol(X) && !isQuoted(X)) { // executable name
       var K = symbolName(X);
+//       if("repeat" == K) {
+//         alert("" + inDs(Ds, "def")["setrgbcolor"][1] + "XXX: " + Os + " Z: " + Z);
+//       }
       var D = inDs(Ds, K);
       var V = D && D[K];
-      if(V) {
-        Os.push(V);
-        exec();
-//         Es.push(V);
-//         if("function" == typeof V) V();
-//         //else Os.push(V);
-//         else run(V);
-      } else throw "Unknown operator 1 '" + K + "'";
-    } else if(isArray(X) && isQuoted(X)) { // proc
-      var M = X.length;
-      for(var I = 0; I < M; I++) {
-        //Es.push(X[I]);
-        Os.push(X[I]);
-        exec();
+      if(V || V === 0) Es.push([false, V]);
+      else throw "Unknown operator '" + K + "'";
+    } else if(Z && isArray(X) && isQuoted(X)) { // proc from Es
+      if(0 < X.length) {
+        var F = X[0];
+        var R = quote(X.slice(1));
+        if(0 < R.length) Es.push([false, R, Xexec]);
+        //if(isSymbol(X) && !isQuoted(X)) Es.push([false, F]);
+        //else Os.push(F);
+        //alert(R.map(function(E) {return E.nm;}) + "\n" + F.nm);
+        run(F, false);
       }
     } else if("function" == typeof X) X(); // operator
     else Os.push(X);
   }
 
-//   function run(T) {
-//     if(T || T == 0) {
-// //       if(isSymbol(T) && !isQuoted(T)) {
-// //         var K = symbolName(T);
-// //         var D = inDs(Ds, K);
-// //         var V = D && D[K];
-// //         if(V) {
-// //           if("function" == typeof V) V();
-// //           //else Os.push(V);
-// //           else run(V);
-// //         } else throw "Unknown operator 1 '" + K + "'";
-// //       } else Os.push(T);
-//     }
-//   }
+  function exec() {
+    var X = Os.pop();
+    run(X, false);
+  }
+
+  function step() {
+    var C = Es.pop();
+    var L = C.shift(); // TODO use for 'exit'
+    var X = C.pop();
+    for(var I = 0; I < C.length; I++)
+      Os.push(C[I]);
+    run(X, true);
+  }
 
   function parse() {
     while(peek()) {
       var T = token();
-      if(T || T == 0) {
+      if(T || T === 0) {
         Os.push(T);
-        if(D <= 0 || 1 == D && isSymbol(T) && "{" == symbolName(T))
+        if(D <= 0 || isSymbol(T) &&
+           (member(symbolName(T), "[]{}") ||
+            "<<" == symbolName(T) || ">>" == symbolName(T))) {
           exec();
+          while(0 < Es.length)
+            step();
+        }
       }
     }
     return Os;
@@ -192,6 +203,7 @@ function wps(E, T) {
   var Os = [];
   var Sd = {};
   var Ds = [Sd];
+  var Es = [];
 
   // trivial
   Sd[".true"] = function() {Os.push(true);};
@@ -207,8 +219,7 @@ function wps(E, T) {
   };
 
   // math
-  Sd["neg"] = function() {Os.push(-1 * Os.pop());};
-  Sd["add"] = function() {Os.push(Os.pop() + Os.pop());};
+  Sd["sub"] = function() {var X = Os.pop(); Os.push(Os.pop() - X);};
   Sd["mul"] = function() {Os.push(Os.pop() * Os.pop());};
   Sd["div"] = function() {var X = Os.pop(); Os.push(Os.pop() / X);};
   Sd["mod"] = function() {var X = Os.pop(); Os.push(Os.pop() % X);};
@@ -219,10 +230,21 @@ function wps(E, T) {
   Sd["counttomark"] = function() {
     var N = 0;
     for(var I = Os.length - 1; 0 <= I; I--)
-      if(M === Os[I]) return N;
+      if(M === Os[I]) return Os.push(N);
       else N++;
     throw "Mark not found";
   };
+  Sd["<<"] = Sd["mark"];
+  Sd[">>"] = function() {
+    var D = {};
+    while(0 < Os.length) {
+      var V = Os.pop();
+      if(M === V) return Os.push(D);
+      D[Os.pop()] = V;
+    }
+    throw "Mark not found";
+  };
+
   Sd["exch"] = function() {
     var Y = Os.pop();
     var X = Os.pop();
@@ -262,77 +284,47 @@ function wps(E, T) {
   Sd["astore"] = function() {
     var A = Os.pop();
     var N = A.length;
-    var X = Os.length - N;
-    for(var I = 0; I < N; I++)
-      A[I] = Os[X + I];
+    for(var I = N - 1; 0 <= I; I--)
+      A[I] = Os.pop();
+    Os.push(A);
   };
 
   Sd["eq"] = function() {var Y = Os.pop(); var X = Os.pop(); Os.push(X == Y);};
   Sd["lt"] = function() {var Y = Os.pop(); var X = Os.pop(); Os.push(X < Y);};
 
-  //Sd["not"] = function() {var X = Os.pop(); Os.push(X == undefined || X == false);};
-  //Sd[".nand"] = function() {Os.push(Sd["not"]() || Sd["not"]());};
+  function Xexec() {Es.push([false, Os.pop()]);};
 
+  Sd["exec"] = Xexec;
   Sd["ifelse"] = function() {
     var N = Os.pop();
     var P = Os.pop();
     var C = Os.pop();
-    if(C == true) run(P);
-    else run(N);
+    Es.push([false, C === true ? P : N, Xexec]);
   };
-  Sd["for"] = function() {
+  Sd["for"] = function Xfor() {
     var B = Os.pop();
     var L = Os.pop();
     var K = Os.pop();
     var J = Os.pop();
     if(K < 0) {
-      for(var I = J; L <= I; I += K) {
-        Os.push(I);
-        run(B);
-      }
+      if(L <= J + K) Es.push([true, J + K, K, L, B, Xfor]);
+      if(L <= J) Es.push([false, J, B, Xexec]);
     } else {
-      for(var I = J; I <= L; I += K) {
-        Os.push(I);
-        run(B);
-      }
+      if(J + K <= L) Es.push([true, J + K, K, L, B, Xfor]);
+      if(J <= L) Es.push([false, J, B, Xexec]);
     }
   };
+  Sd["repeat"] = function Xrepeat() {
+    var B = Os.pop();
+    var N = Os.pop();
+    if(1 < N) Es.push([true, N - 1, B, Xrepeat]);
+    if(0 < N) Es.push([false, B, Xexec]);
+  };
 
-  Sd["="] = function() {alert(Os.pop());};
+  Sd["="] = function() {var X = Os.pop(); alert(X.nm || X.length || X);};
   Sd["=="] = function() {alert(Os.pop());}; // TODO
   Sd["stack"] = function() {alert(Os);}; // TODO
   Sd["pstack"] = function() {alert(Os);}; // TODO
-
-//   function run1(T) {
-//     if(T || T == 0) {
-//       if(isSymbol(T) && !isQuoted(T)) {
-//         var K = symbolName(T);
-//         var D = inDs(Ds, K);
-//         var V = D && D[K];
-//         if(V) {
-//           if("function" == typeof V) V();
-//           //else Os.push(V);
-//           else run(V);
-//         } else throw "Unknown operator 1 '" + K + "'";
-//       } else Os.push(T);
-//     }
-//   }
-
-//   function run(C) {
-//     if(!C.length) Os.push(C); // TODO run?
-//     else {
-//       var M = C.length;
-//       for(var I = 0; I < M; I++) {
-//         var T = C[I];
-//         run1(T);
-// //         if(isSymbol(T) && !isQuoted(T)) {
-// //           var X = symbolName(T);
-// //           if(Sd[X]) Sd[X]();
-// //           else throw "Missing operator '" + X + "'";
-// //         } else Os.push(T);
-//       }
-//     }
-//   }
 
   Sd["dict"] = function() {Os.pop(); Os.push({});};
   Sd["get"] = function() { // dict key -- any
@@ -354,7 +346,7 @@ function wps(E, T) {
   Sd["end"] = function() {Ds.pop();};
   Sd["currentdict"] = function() {Os.push(Ds[Ds.length - 1]);};
   Sd["where"] = function() {
-    var K = Os.pop();
+    var K = symbolName(Os.pop());
     var D = inDs(Ds, K);
 	if(D) {
 	  Os.push(D);
@@ -362,21 +354,12 @@ function wps(E, T) {
 	} else Os.push(false);
   };
 
-//   Sd["def"] = function() {
-//     var C = Os.pop();
-//     var N = Os.pop();
-//     if(isSymbol(N) && isQuoted(N)) Sd[symbolName(N)] = function() {run(C);};
-//     else throw "Wrong operator name '" + N + "' as '" + typeof N
-//       + "' for '" + C + "'";
-//   };
-
   Sd["array"] = function() {Os.push(new Array(Os.pop()));};
 
   Sd["restore"] = function() {Os.pop();}; // TODO
   Sd["save"] = function() {Os.push([]);}; // TODO
 
   Sd["bind"] = function() {}; // TODO
-  Sd["load"] = function() {}; // TODO
 
   //////////////////////////////////////////////////////////
 
@@ -395,6 +378,9 @@ function wps(E, T) {
   };
   Sd[".gc"] = function() { // -- gc
     Os.push(E.getContext("2d"));
+  };
+  Sd[".date"] = function() { // -- date
+    Os.push(new Date());
   };
 
   /////////////////////////////////////////////////////
@@ -416,8 +402,95 @@ function wps(E, T) {
     Os.push("rgba(" + R + "," + G + "," + B + "," + A + ")");
   };
 
+  Sd[".xy"] = function() { // x y m -- x' y'
+    var M = Os.pop();
+    var Y = Os.pop();
+    var X = Os.pop();
+    Os.push(M[0] * X + M[2] * Y + M[4]);
+    Os.push(M[1] * X + M[3] * Y + M[5]);
+  };
+  Sd["translate"] = function() {
+	var A = Os.pop();
+	var B = Os.pop();
+	if(typeof A == "object") Os.push([1, 0, 0, 1, Os.pop(), B]);
+    else {
+	  var M = [1, 0, 0, 1, B, A];
+	  CTMupdate(M);
+	  E.getContext("2d").translate(B, A);
+	}
+  };
+  Sd["rotate"] = function() {
+	var A = Os.pop();
+	if(typeof A == "object") {
+	  var B = opStack.pop();
+      Os.push([Math.cos(d2r(B)), Math.sin(d2r(B)),
+               -1 * Math.sin(d2r(B)), Math.cos(d2r(B)),
+               0, 0]);
+	} else {
+	  var M = [Math.cos(d2r(A)), Math.sin(d2r(A)),
+               -1 * Math.sin(d2r(A)), Math.cos(d2r(A)),
+               0, 0];
+      CTMupdate(M);
+	  //E.getContext("2d").rotate(d2r(A));
+	  E.getContext("2d").rotate(A);
+	}
+  };
+  Sd["scale"] = function() {
+	var A = Os.pop();
+	var B = Os.pop();
+	if(typeof A == "object") Os.push([Os.pop(), 0, 0, B, 0, 0]);
+    else {
+	  var M = [B, 0, 0, A, 0, 0,1];
+	  CTMupdate(M);
+	  ctx.scale(B, A);
+	}
+  };
+  Sd["transform"] = function() {
+	var A = Os.pop();
+    Os.push(A);
+	if(typeof A != "object")
+      Sd[".tm"]();
+    Sd[".xy"]();
+  };
+  Sd["itransform"] = function() {
+	var A = Os.pop();
+	if(typeof A == "object") Os.push(inverse(A));
+    else {
+      Os.push(A);
+      Sd[".tm"]();
+	  var M = Os.pop();
+      Os.push(inverse(M));
+    }
+    Sd[".xy"]();
+  };
+  Sd["rlineto"] = function() {
+	var Y = Os.pop();
+	var X = Os.pop();
+// 	pathY += yUnderMatrix(offX,offY,CTMdelta);
+// 	pathX += xUnderMatrix(offX,offY,CTMdelta);
+// 	var iCTMdelta = CTMdelta.inverse();
+// 	currentX = xUnderMatrix(pathX,pathY,iCTMdelta);
+// 	currentY = yUnderMatrix(pathX,pathY,iCTMdelta);
+// 	pathX=currentX;
+// 	pathY=currentY;
+// 	CTMdelta = CTMident;
+
+ 	//ctx.lineTo(X, Y);
+  };
+  function d2r(A) {
+    return Math.PI / 180 * A;
+  }
+  function CTMupdate(M) {
+// 	currentX = xUnderMatrix(currentX,currentY,mat);
+// 	currentY = yUnderMatrix(currentX,currentY,mat);
+// 		CTMdelta = CTMdelta.timesMatrix(mat);
+// 		CTM = CTM.timesMatrix(mat);
+  }
+
+
+
   if(T.length)
     for(var I = 0; I < T.length; I++)
-      ps0(T[I], Os, Ds);
-  else ps0(T, Os, Ds);
+      ps0(T[I], Os, Ds, Es);
+  else ps0(T, Os, Ds, Es);
 }
