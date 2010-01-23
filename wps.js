@@ -144,21 +144,15 @@ function ps0(L, Os, Ds, Es) { // TODO Nd name dict name=>sym?
   function run(X, Z) {
     if(isSymbol(X) && !isQuoted(X)) { // executable name
       var K = symbolName(X);
-//       if("repeat" == K) {
-//         alert("" + inDs(Ds, "def")["setrgbcolor"][1] + "XXX: " + Os + " Z: " + Z);
-//       }
       var D = inDs(Ds, K);
       var V = D && D[K];
-      if(V || V === 0) Es.push([false, V]);
-      else throw "Unknown operator '" + K + "'";
+      if(V !== undefined) Es.push([false, V]);
+      else throw "Unknown operator '" + K + "' " + V;
     } else if(Z && isArray(X) && isQuoted(X)) { // proc from Es
       if(0 < X.length) {
         var F = X[0];
         var R = quote(X.slice(1));
         if(0 < R.length) Es.push([false, R, Xexec]);
-        //if(isSymbol(X) && !isQuoted(X)) Es.push([false, F]);
-        //else Os.push(F);
-        //alert(R.map(function(E) {return E.nm;}) + "\n" + F.nm);
         run(F, false);
       }
     } else if("function" == typeof X) X(); // operator
@@ -256,7 +250,7 @@ function wps(E, T) {
   Sd["index"] = function() {
     Os.push(Os[Os.length - 2 - Os.pop()]);
   };
-  Sd["roll"] = function() {
+  Sd["roll"] = function() { // TODO in ps
     var J = Os.pop();
     var N = Os.pop();
     var X = [];
@@ -272,11 +266,12 @@ function wps(E, T) {
 	if("object" == typeof N) {
 	  var X = Os.pop();
 	  for(var I in X)
-        N[I]=X[i];
+        N[I] = X[I];
+      Os.push(N);
     } else {
       var X = Os.length - N;
       for(var I = 0; I < N; I++)
-        Os.push(X + I);
+        Os.push(Os[X + I]);
     }
   };
 
@@ -301,7 +296,7 @@ function wps(E, T) {
     var C = Os.pop();
     Es.push([false, C === true ? P : N, Xexec]);
   };
-  Sd["for"] = function Xfor() {
+  Sd["for"] = function Xfor() { // TODO in ps
     var B = Os.pop();
     var L = Os.pop();
     var K = Os.pop();
@@ -314,14 +309,14 @@ function wps(E, T) {
       if(J <= L) Es.push([false, J, B, Xexec]);
     }
   };
-  Sd["repeat"] = function Xrepeat() {
+  Sd["repeat"] = function Xrepeat() { // TODO in ps
     var B = Os.pop();
     var N = Os.pop();
     if(1 < N) Es.push([true, N - 1, B, Xrepeat]);
     if(0 < N) Es.push([false, B, Xexec]);
   };
 
-  Sd["="] = function() {var X = Os.pop(); alert(X.nm || X.length || X);};
+  Sd["="] = function() {var X = Os.pop(); alert(X && X.nm || X);};
   Sd["=="] = function() {alert(Os.pop());}; // TODO
   Sd["stack"] = function() {alert(Os);}; // TODO
   Sd["pstack"] = function() {alert(Os);}; // TODO
@@ -353,12 +348,31 @@ function wps(E, T) {
 	  Os.push(true);
 	} else Os.push(false);
   };
-
   Sd["array"] = function() {Os.push(new Array(Os.pop()));};
+
+  Sd["type"] = function() { // any -- name
+    var A = Os.pop();
+    var X;
+    if(null === A) X = "nulltype";
+    else if(true === A || false === A) X = "booleantype";
+    else if(M === A) X = "marktype";
+    else if("string" == typeof A) X = "stringtype";
+    else if(isSymbol(A)) X = isQuoted(A) ? "nametype" : "operatortype";
+    else if("function" == typeof A) X = "operatortype";
+    else if(isArray(A)) X = "arraytype";
+    else if("object" == typeof A) X = "dicttype";
+    else if(1 * A == A) X = A % 1 == 0 ? "integertype" : "realtype";
+    else throw "Undefined type '" + A + "'";
+    Os.push(X);
+    // filetype
+    // packedarraytype (LanguageLevel 2)
+    // fonttype
+    // gstatetype (LanguageLevel 2)
+    // savetype
+  };
 
   Sd["restore"] = function() {Os.pop();}; // TODO
   Sd["save"] = function() {Os.push([]);}; // TODO
-
   Sd["bind"] = function() {}; // TODO
 
   //////////////////////////////////////////////////////////
@@ -382,10 +396,74 @@ function wps(E, T) {
   Sd[".date"] = function() { // -- date
     Os.push(new Date());
   };
+  Sd[".window"] = function() { // -- window
+    Os.push(window);
+  };
+  Sd[".callback"] = function() { // body -- callback // TODO refactor properly
+    var X = Os.pop();
+    Os.push(function() {
+              //alert(".callback");
+              //Es.push([false, X]); // TODO process event in ps0 ???
+  function run(X, Z) {
+    if(isSymbol(X) && !isQuoted(X)) { // executable name
+      var K = symbolName(X);
+      var D = inDs(Ds, K);
+      var V = D && D[K];
+      if(V !== undefined) Es.push([false, V]);
+      else throw "Unknown operator '" + K + "' " + V;
+    } else if(Z && isArray(X) && isQuoted(X)) { // proc from Es
+      if(0 < X.length) {
+        var F = X[0];
+        var R = quote(X.slice(1));
+        if(0 < R.length) Es.push([false, R, Xexec]);
+        run(F, false);
+      }
+    } else if("function" == typeof X) X(); // operator
+    else Os.push(X);
+  }
+  function step() {
+    var C = Es.pop();
+    var L = C.shift(); // TODO use for 'exit'
+    var X = C.pop();
+    for(var I = 0; I < C.length; I++)
+      Os.push(C[I]);
+    run(X, true);
+  }
+              run(X, true);
+              while(0 < Es.length)
+                step();
+            });
+  };
 
   /////////////////////////////////////////////////////
 
   // html5 utility operators
+
+  Sd[".minv"] = function() { // m -- m^-1
+    var M = Os.pop();
+    var a = M[0]; var b = M[1];
+    var d = M[2]; var e = M[3];
+    var g = M[4]; var h = M[5];
+    Os.push([e, b, d, a, d*h-e*g, b*g-a*h]);
+  };
+  Sd[".mmul"] = function() { // m1 m2 -- (m1 x m2)
+    var B = Os.pop();
+    var A = Os.pop();
+    var a = A[0]; var b = A[1];
+    var d = A[2]; var e = A[3];
+    var g = A[4]; var h = A[5];
+    var r = B[0]; var s = B[1];
+    var u = B[2]; var v = B[3];
+    var x = B[4]; var y = B[5];
+    Os.push([a*r+b*u, a*s+b*v, d*r+e*u, d*s+e*v, g*r+h*u+x, g*s+h*v+y]);
+  };
+  Sd[".xy"] = function() { // x y m -- x' y'
+    var M = Os.pop();
+    var Y = Os.pop();
+    var X = Os.pop();
+    Os.push(M[0] * X + M[2] * Y + M[4]);
+    Os.push(M[1] * X + M[3] * Y + M[5]);
+  };
 
   // TODO js ffi to manipulate strings so the following can be in ps
   Sd[".rgb"] = function() {
@@ -401,93 +479,6 @@ function wps(E, T) {
     var R = Os.pop();
     Os.push("rgba(" + R + "," + G + "," + B + "," + A + ")");
   };
-
-  Sd[".xy"] = function() { // x y m -- x' y'
-    var M = Os.pop();
-    var Y = Os.pop();
-    var X = Os.pop();
-    Os.push(M[0] * X + M[2] * Y + M[4]);
-    Os.push(M[1] * X + M[3] * Y + M[5]);
-  };
-  Sd["translate"] = function() {
-	var A = Os.pop();
-	var B = Os.pop();
-	if(typeof A == "object") Os.push([1, 0, 0, 1, Os.pop(), B]);
-    else {
-	  var M = [1, 0, 0, 1, B, A];
-	  CTMupdate(M);
-	  E.getContext("2d").translate(B, A);
-	}
-  };
-  Sd["rotate"] = function() {
-	var A = Os.pop();
-	if(typeof A == "object") {
-	  var B = opStack.pop();
-      Os.push([Math.cos(d2r(B)), Math.sin(d2r(B)),
-               -1 * Math.sin(d2r(B)), Math.cos(d2r(B)),
-               0, 0]);
-	} else {
-	  var M = [Math.cos(d2r(A)), Math.sin(d2r(A)),
-               -1 * Math.sin(d2r(A)), Math.cos(d2r(A)),
-               0, 0];
-      CTMupdate(M);
-	  //E.getContext("2d").rotate(d2r(A));
-	  E.getContext("2d").rotate(A);
-	}
-  };
-  Sd["scale"] = function() {
-	var A = Os.pop();
-	var B = Os.pop();
-	if(typeof A == "object") Os.push([Os.pop(), 0, 0, B, 0, 0]);
-    else {
-	  var M = [B, 0, 0, A, 0, 0,1];
-	  CTMupdate(M);
-	  ctx.scale(B, A);
-	}
-  };
-  Sd["transform"] = function() {
-	var A = Os.pop();
-    Os.push(A);
-	if(typeof A != "object")
-      Sd[".tm"]();
-    Sd[".xy"]();
-  };
-  Sd["itransform"] = function() {
-	var A = Os.pop();
-	if(typeof A == "object") Os.push(inverse(A));
-    else {
-      Os.push(A);
-      Sd[".tm"]();
-	  var M = Os.pop();
-      Os.push(inverse(M));
-    }
-    Sd[".xy"]();
-  };
-  Sd["rlineto"] = function() {
-	var Y = Os.pop();
-	var X = Os.pop();
-// 	pathY += yUnderMatrix(offX,offY,CTMdelta);
-// 	pathX += xUnderMatrix(offX,offY,CTMdelta);
-// 	var iCTMdelta = CTMdelta.inverse();
-// 	currentX = xUnderMatrix(pathX,pathY,iCTMdelta);
-// 	currentY = yUnderMatrix(pathX,pathY,iCTMdelta);
-// 	pathX=currentX;
-// 	pathY=currentY;
-// 	CTMdelta = CTMident;
-
- 	//ctx.lineTo(X, Y);
-  };
-  function d2r(A) {
-    return Math.PI / 180 * A;
-  }
-  function CTMupdate(M) {
-// 	currentX = xUnderMatrix(currentX,currentY,mat);
-// 	currentY = yUnderMatrix(currentX,currentY,mat);
-// 		CTMdelta = CTMdelta.timesMatrix(mat);
-// 		CTM = CTM.timesMatrix(mat);
-  }
-
-
 
   if(T.length)
     for(var I = 0; I < T.length; I++)

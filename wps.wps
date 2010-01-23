@@ -1,10 +1,8 @@
 %%% (c) 2009 Tomas Hlavaty
 
 currentdict/systemdict currentdict put
-
 systemdict/{/mark cvx put
 systemdict/[/mark cvx put
-
 systemdict/]
 /counttomark cvx
 /array cvx
@@ -12,14 +10,72 @@ systemdict/]
 /exch cvx
 /pop cvx
 5 array astore cvx put
-
 systemdict/}/] cvx/cvx cvx 2 array astore cvx put
+systemdict/def{currentdict 2 index 2 index put pop pop}put
 
-%[1 2 3] =
+%% stack & dict
 
-systemdict/def{currentdict 2 index 2 index put pop pop} put
+/dup{0 index}def
+/cleartomark{array pop}def
+
+/known{exch begin where{currentdict eq}{false}if end}def
+/store{1 index where{3 1 roll put}{def}ifelse}def
+/load{dup where pop exch get}def
+
+/maxlength 1000 def % TODO
+
+%% conditionals
+
+/true/.true load def
+/false/.false load def
+/null/.null load def
+
+/not{false true ifelse}def
+/.logand{{{true}{false}ifelse}{pop false}ifelse}def
+/and/.logand load def % TODO numeric and
+/.logor{{pop true}{{true}{false}ifelse}ifelse}def
+/or/.logor load def % TODO numeric or
+
+/ne{eq not}def
+/ge{lt not}def
+/le{1 index 1 index eq 3 1 roll lt or}def
+/gt{le not}def
+/if{{}ifelse}def
+
+/.repeat{1 1 4 2 roll for}def
+%//     var B = Os.pop();
+%//     var N = Os.pop();
+%//     if(1 < N) Es.push([true, N - 1, B, Xrepeat]);
+%//     if(0 < N) Es.push([false, B, Xexec]);
+% /repeat{ % n b
+%   exch 2 copy dup % b n, b n n
+%   1 gt{-1 add exch/repeat cvx exec}{pop pop}ifelse
+%   0 gt{exec}{pop}ifelse
+% } def
+% /repeat{ % n b
+%   exch % b n
+%   2 copy % b n b n
+%   0 gt pstack{exec}{pop}ifelse % b n
+%   pop pop
+% %  dup 1 gt{-1 add exch repeat}{pop pop}ifelse
+% } def
+% /repeat { % n b
+%   2 dict begin
+%     /b exch def
+%     /n exch def
+%     0 n lt b if
+%     1 n lt {n 1 sub b repeat} if
+%   end
+% } def
+%/repeat{/pop cvx exch/exec cvx 3 array astore cvx 1 1 4 2 roll for}def
+%/loop{0 exch 0 exch 1 exch for}def % TODO
+%/exit{}def % TODO
 
 %% math
+
+/neg{0 exch sub}def
+/add{neg sub}def
+/idiv{div floor}def
 
 /abs{.math(abs)1 .call}def
 /.acos{.math(acos)1 .call}def
@@ -51,27 +107,20 @@ systemdict/def{currentdict 2 index 2 index put pop pop} put
 /.sqrt1_2{.math(SQRT1_2)get}def
 /.sqrt2{.math(SQRT2)get}def
 
-/sub{neg add}def
-/idiv{div .floor}def
+%% html
 
-%% stack
+/.setTimeout{.window(setTimeout)2 .call}def % cb ms -- id
+/.clearTimeout{.window(clearTimeout)1 .call pop}def % id --
+/.setInterval{.window(setInterval)2 .call}def % cb ms -- id
+/.clearInterval{.window(clearInterval)1 .call pop}def % id --
+/.document{.window(document)get}def % -- document
+/.getElementById{.document(getElementById)1 .call}def % id -- w
 
-/dup{0 index}def
-
-%% conditionals
-
-/true .true def
-/false .false def
-/null .null def
-
-/ne{eq not}def
-/ge{lt not}def
-/le{1 index 1 index eq 3 1 roll lt or}def
-/gt{le not}def
-/if{{}ifelse}def
-
-/loop{0 exch 0 exch 1 exch for}def
-/repeat{1 1 4 2 roll for}def
+%/.attachEvent{3 2 roll(attachEvent)2 .call pop}def % e k fn --
+%/.setAttribute{3 2 roll(setAttribute)2 .call pop}def % e k v --
+/.hook{put}def % e k cb --
+%if( td.attachEvent ) td.attachEvent('onclick', 'alert("blabla")');
+% else td.setAttribute('onclick', 'alert("blabla")');
 
 %% html5
 
@@ -156,6 +205,7 @@ systemdict/def{currentdict 2 index 2 index put pop pop} put
 %% PostScript
 
 /.deg2rad{.pi 180 div mul}def
+/.rad2deg{180 .pi div mul}def
 
 /identmatrix{pop [1 0 0 1 0 0]}def % TODO fill
 /matrix{6 array identmatrix}def
@@ -164,55 +214,55 @@ systemdict/def{currentdict 2 index 2 index put pop pop} put
 /.cy 0 def
 /.px 0 def
 /.py 0 def
-/.tm0 matrix def
 /.tm matrix def
 /.tmd matrix def
 
 /.setPoint{/.cy exch def/.cx exch def}def
 /.setPath{/.py exch def/.px exch def}def
 
+/.update{ % m --
+  dup .cx exch .cy exch % m .cx .cy m
+  .xy .setPoint % m
+  dup .tmd exch .mmul/.tmd exch def % (.tmd x m)
+  .tm exch .mmul setmatrix % = .tm x m
+} def
+
+/transform{dup type(arraytype)ne{.tm}if .xy}def
+/itransform{dup type(arraytype)ne{.tm}if .minv .xy}def
+
+/.scaleM{0 0 3 2 roll 0 0 6 array astore}def % x y -- [x 0 0 y 0 0]
+/.scale3{pop .scaleM}def
+/.scale2{2 copy .scaleM .update .scale}def
+/scale{dup type(arraytype)eq{.scale3}{.scale2}ifelse}def
+
+/.translateM{1 0 0 1 6 4 roll 6 array astore}def % x y -- [1 0 0 1 x y]
+/.translate3{pop .translateM}def
+/.translate2{2 copy .translateM .update .translate}def
+/translate{dup type(arraytype)eq{.translate3}{.translate2}ifelse}def
+
+/.rotateM{dup cos exch sin dup neg 2 index 0 0 6 array astore}def % a -- [c s -s c 0 0]
+/.rotate2{pop .deg2rad .rotateM}def
+/.rotate1{.deg2rad dup .rotateM .update .rotate}def
+/rotate{dup type(arraytype)eq{.rotate2}{.rotate1}ifelse}def
+
 /currentpoint{.cx .cy}def
 
 /setmatrix{/.tm exch def}def
 
-/..p{2 dict begin/y exch def/x exch def}def
-/..P{end}def
-/..tm{6 dict begin/ty exch def/tx exch def/d exch def/c exch def/b exch def/a exch def}def
-/..TM{end}def
-/.x{a x mul c y mul tx add add}def
-/.y{b x mul d y mul ty add add}def
-/.mmul{}def % TODO
-/.tmu{/.cx .x def/.cy .y def/.tmd .tmd}def % TODO
 %– initmatrix – 	Set CTM to device default
 %matrix defaultmatrix matrix 	Fill matrix with device default matrix
 %matrix currentmatrix matrix 	Fill matrix with CTM
 
-/translate{2 copy ..p 1 0 0 1 6 4 roll ..tm .tmu ..TM ..P .translate}def % TODO
-%tx ty matrix translate matrix 	Define translation by (tx , ty)
-
-%sx sy scale – 	Scale user space by sx and sy
-%sx sy matrix scale matrix 	Define scaling by sx and sy
-
-%angle rotate – 	Rotate user space by angle degrees
-%angle matrix rotate matrix 	Define rotation by angle degrees
-
 %matrix concat – 	Replace CTM by matrix ´ CTM
 %matrix1 matrix2 matrix3 concatmatrix matrix3 	Fill matrix3 with matrix1 ´ matrix2
 
-/transform{..p .tm ..tm .x .y ..TM ..P}def % TODO
-%x y matrix transform x¢ y¢ 	Transform (x, y) by matrix
-
 %dx dy dtransform dx¢ dy¢ 	Transform distance (dx, dy) by CTM
 %dx dy matrix dtransform dx¢ dy¢ 	Transform distance (dx, dy) by matrix
-
-%x¢ y¢ itransform x y 	Perform inverse transform of (x¢, y¢) by CTM
-%x¢ y¢ matrix itransform x y 	Perform inverse transform of (x¢, y¢) by matrix
 
 %dx¢ dy¢ idtransform dx dy 	Perform inverse transform of distance (dx¢, dy¢) by CTM
 %dx¢ dy¢ matrix idtransform dx dy 	Perform inverse transform of distance (dx¢, dy¢) by matrix
 
 %matrix1 matrix2 invertmatrix matrix2 	Fill matrix2 with inverse of matrix1
-
 
 /gsave{.save}def
 /grestore{.restore}def
@@ -221,8 +271,8 @@ systemdict/def{currentdict 2 index 2 index put pop pop} put
 /rectstroke{.strokeRect}def
 /newpath{.beginPath}def
 /closepath{.closePath}def
-/moveto{2 copy .setPoint 2 copy .setPath .moveTo/.tm0 matrix def}def
-/lineto{2 copy .setPoint 2 copy .setPath .lineTo/.tm0 matrix def}def
+/moveto{2 copy .setPoint 2 copy .setPath/.tmd matrix def .moveTo}def
+/lineto{2 copy .setPoint 2 copy .setPath/.tmd matrix def .lineTo}def
 /arcto{.arcTo}def
 
 /setlinewidth{.setLineWidth}def
@@ -236,30 +286,28 @@ systemdict/def{currentdict 2 index 2 index put pop pop} put
 /currentmiterlimit{.getMiterLimit}def
 
 /setgray{255 mul dup dup .rgb dup .setStrokeStyle .setFillStyle}def
-/setrgbcolor{3{255 mul 3 1 roll} repeat .rgb dup .setStrokeStyle .setFillStyle}def
+/setrgbcolor{3{255 mul round 3 1 roll}repeat .rgb dup .setStrokeStyle .setFillStyle}def
 /setfont{} def % TODO C.font = N + "pt " + F.V;
 /clippath{0 0 .gcanvas(width)get .gcanvas(height)get .rect}def % TODO
 /show{currentpoint 3 2 roll .fillText .strokeText}def % TODO
-/rlineto{lineto}def % TODO
 
-/currentflat{42}def
-/setflat{pop}def
+/rlineto{.tmd .xy .py add exch .px add exch .tmd .minv .xy lineto}def
 
-/transform{}def % TODO
-/itransform{}def % TODO
+/currentflat{42}def % TODO
+/setflat{pop}def % TODO
 
-/currentpoint{0 0}def % TODO
+/showpage{}def % TODO
 
-/showpage{}def
+%/arc{.deg2rad exch .deg2rad exch true (arc)6 .gcall0}def % TODO currentpoint
+%/arcn{.deg2rad exch .deg2rad exch false(arc)6 .gcall0}def % TODO currentpoint
+/arc{.deg2rad exch .deg2rad exch true .arc}def % TODO currentpoint
+/arcn{.deg2rad exch .deg2rad exch false .arc}def % TODO currentpoint
 
-/arc{.deg2rad exch .deg2rad exch true(arc)6 .gcall0}def % TODO currentpoint
-/arcn{.deg2rad exch .deg2rad exch false(arc)6 .gcall0}def % TODO currentpoint
+/fill{.fill newpath currentpoint .moveTo}def % TODO
 
-/fill{.fill newpath currentpoint moveto}def % TODO
+/setdash{pop pop}def % TODO
 
-/setdash{pop pop}def
-
-/stroke{.stroke newpath currentpoint moveto}def
+/stroke{.stroke newpath currentpoint .moveTo}def
 
 /curveto{2 copy .setPoint .bezierCurveTo}def
 
@@ -306,7 +354,7 @@ systemdict/def{currentdict 2 index 2 index put pop pop} put
 /Tf{setfont}def % TODO
 /Tr{}def % TODO
 /Ts{}def % TODO
-/Td{}def % TODO
+/Td{translate 0 0 moveto}def
 /TD{}def % TODO
 /Tm{}def % TODO
 /T*{}def % TODO
@@ -318,14 +366,14 @@ systemdict/def{currentdict 2 index 2 index put pop pop} put
 /d1{}def % TODO
 /CS{}def % TODO
 /cs{}def % TODO
-/SC{}def % TODO
+/SC/setcolor load def
 /SCN{}def % TODO
-/sc{}def % TODO
+/sc/setcolor load def
 /scn{}def % TODO
 /G{}def % TODO
 /g{}def % TODO
 /RG{}def % TODO
-/rg{3{255 mul 3 1 roll} repeat .rgb dup .setStrokeStyle .setFillStyle}def % TODO
+/rg{setrgbcolor}def % TODO
 /K{}def % TODO
 /k{}def % TODO
 /sh{}def % TODO
@@ -340,6 +388,87 @@ systemdict/def{currentdict 2 index 2 index put pop pop} put
 /EMC{}def % TODO
 /BX{}def % TODO
 /EX{}def % TODO
+
+/PS{cvx exec}def
+
+% /Operators 50 dict begin
+%   /cs { //ResolveColorSpace exec //SetColorSpaceSafe exec
+%       } bind def
+%   /scn { //SetColor exec } bind def
+%   /CS //cs def
+%   /SCN { //SetColor exec } bind def
+
+%   /re {
+%     4 2 roll moveto  exch dup 0 rlineto  0 3 -1 roll rlineto  neg 0 rlineto
+%     closepath
+%   } def
+%   /sh { % Reserved for ps3write.
+%         ResolveShading 
+%         dup /Background known {
+%           gsave
+%           dup /ColorSpace get setcolorspace
+%           dup /Background get aload pop setcolor
+%           pathbbox               % x0 y0 x1 y1
+%           2 index sub exch 3 index sub exch
+%           rectfill
+%           grestore
+%         } if
+%         shfill 
+%       } bind def
+
+%   /Do { //DoXObject exec } bind def
+
+%   /BI { currentglobal false setglobal << } bind def
+%   /ID { >>
+%         dup /DataSource currentfile 
+%         % HACK BEG
+%         % This hack provides a compatibility to HP LaserJet 1320,
+%         % which sometimes closes the underlying stream when EOD 
+%         % is reached in the ASCII85Decode filter.
+%         % This portion is not required by the Postscript language definition.
+%         2 index /F //knownget exec {
+%           /A85 eq {
+%             0 (~>) /SubFileDecode filter 
+%           } if
+%         } if
+%         % HACK END
+%         put
+%         //CompleteInlineImage exec
+%         exch setglobal
+%         //DoImage exec
+%       } bind def
+%   /EI {} bind def
+
+%   /BT { gsave //GraphicState /InitialTextMatrix get currentmatrix pop } bind def
+%   /Tc { //GraphicState exch /CharacterSpacing exch put } bind def
+%   /TL { //GraphicState exch /TextLeading exch put } bind def
+%   /Tr { //GraphicState exch /TextRenderingMode exch put } bind def
+%   /Ts {  % Ghostscript never generates it.
+%         mark (Unimplemented SetTextRise) //error exec
+%       } bind def
+%   /Tw { //GraphicState exch /WordSpacing exch put } bind def
+%   /Tz { % Ghostscript never generates it.
+%             mark (Unimplemented SetHorizontalTextScaling) //error exec
+%       } bind def
+%   /TD { dup neg //TL exec //Td exec } bind def
+%   /Tm { //GraphicState /InitialTextMatrix get setmatrix
+%         //TempMatrix astore concat
+%         0 0 moveto } bind def
+%   /T* { 0 //GraphicState /TextLeading get neg //Td exec } bind def
+%   /Tj { //ShowTextBeg exec  //ShowText exec  //ShowTextEnd exec } bind def
+%   /'  { //T* exec  //ShowText exec  //ShowTextEnd exec } bind def
+%   /"  { 3 2 roll //Tw exec exch //Tc exec //' exec} bind def
+%   /TJ //ShowTextWithGlyphPositioning def
+%   /Tf //SetFont def
+
+%   /BDC { BeginMarkedContentSequenceWithPropertyList } bind def
+%   /BMC { BeginMarkedContentSequence } bind def
+%   /EMC { EndMarkedContentSequence } bind def
+%   /BX { BeginCompatibilitySection } bind def
+%   /EX { EndCompatibilitySection } bind def
+%   /DP { DefineMarkedContentPointWithPropertyList } bind def
+%   /MP { DefineMarkedContentPoint } bind def
+% currentdict end def
 
 %% finish
 
