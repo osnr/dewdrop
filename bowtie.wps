@@ -1,5 +1,5 @@
 % based on the JavaScript example from
-% https://developer.mozilla.org/en/drawing_graphics_with_canvas
+% https://developer.mozilla.org/en/drawing_graphics_with_canvas#section_6
 
 0 0 180 180 .gbox
 
