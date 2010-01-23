@@ -195,6 +195,8 @@ systemdict/def{currentdict 2 index 2 index put pop pop}put
 /.setLineWidth{(lineWidth).gput}def
 /.setLineCap{(lineCap).gput}def
 /.setLineJoin{(lineJoin).gput}def
+/.setLineCap{pop}def % TODO remove this later (Firefox throws)
+/.setLineJoin{pop}def % TODO remove this later (Firefox throws)
 /.setMiterLimit{(miterLimit).gput}def
 /.setShadowOffsetX{(shadowOffsetX).gput}def
 /.setShadowOffsetY{(shadowOffsetY).gput}def
@@ -366,9 +368,9 @@ systemdict/def{currentdict 2 index 2 index put pop pop}put
 /d1{}def % TODO
 /CS{}def % TODO
 /cs{}def % TODO
-/SC/setcolor load def
+%/SC/setcolor load def
 /SCN{}def % TODO
-/sc/setcolor load def
+%/sc/setcolor load def
 /scn{}def % TODO
 /G{}def % TODO
 /g{}def % TODO
