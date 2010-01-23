@@ -4,9 +4,9 @@
 #+options: num:nil toc:t
 #+macro: ps [[http://www.capcode.de/help/$1][$1]]
 
-#+BEGIN_HTML:
+#+begin_html
 <p class="h0">WPS: PostScript for the Web</p>
-#+END_HTML
+#+end_html
 
 Welcome to WPS, a PostScript and PDF interpreter for HTML 5 canvas.
 
@@ -29,18 +29,21 @@ canvas {width:12em;height:12em;border:1px dashed black}
 #+html: <div id="wps" style="display:none">
 #+include "wps.wps" src text
 #+html: </div>
+
 #+begin_html
 <script type="text/javascript" src="wps.js"></script>
 <script>
 function $(Id) {return document.getElementById(Id);}
 function $$(Id) {return $(Id).textContent;}
+wps = new Wps;
+wps.parse($$("wps"));
 </script>
 #+end_html
 
 * WPS sandbox
 
-#+html: <canvas id="xsandbox"></canvas>
 #+begin_html
+<canvas id="xsandbox"></canvas>
 <p>Sandbox:</p>
 <p>
 <textarea id="sandbox" style="width:100%" rows="18">
@@ -64,7 +67,7 @@ end
 </textarea>
 </p>
 <script>
-function sandbox() {wps($("xsandbox"), [$$("wps"), $("sandbox").value]);}
+function sandbox() {(new Wps).parse($$("wps"), "(xsandbox) .setGc", $("sandbox").value);}
 </script>
 <button onclick="javascript:sandbox();">Run</button> code from sandbox.
 #+end_html
@@ -160,7 +163,7 @@ function ex1() {
 
 PostScript has simple but non-trivial syntax so a reader which reads
 text and creates internal PostScript objects is necessary.  The reader
-and evaluator is called =ps0= (an empty PostScript interpreter) in the
+and evaluator is called =Ps0= (an empty PostScript interpreter) in the
 JavaScript code bellow.
 
 #+html: <div id="example2">
@@ -173,7 +176,7 @@ function example2(T) {
    Sd["+"] = function() {Os.push(Os.pop() + Os.pop());};
    Sd["dup"] = function() {var X = Os.pop(); Os.push(X); Os.push(X);};
    Sd["="] = function() {alert(Os.pop());};
-   ps0(T, Os, Ds, Es); // read and interpret code T
+   (new Ps0(Os, Ds, Es)).parse(T); // read and interpret code T
 }
 #+end_src
 #+html: </div>
@@ -213,11 +216,20 @@ PostScript code is from the [[http://www.math.ubc.ca/~cass/graphics/manual/pdf/c
 } def
 
 5 factorial2 =
+
+% based on the PostScript example from
+% http://partners.adobe.com/public/developer/en/ps/sdk/sample/BlueBook.zip
+
+/factorial3 {
+  dup 1 gt {dup 1 sub factorial3 mul} if
+} def
+
+5 factorial3 =
 #+end_src
 #+html: </div>
 #+begin_html
 <script>
-function ex3() {wps(null, [$$("wps"), $$("example3")]);}
+function ex3() {(new Wps).parse($$("wps"), $$("example3"));}
 </script>
 <button onclick="javascript:ex3();">Run</button> the example.
 #+end_html
@@ -308,7 +320,8 @@ All the above types are represented directly in JavaScript except:
 | proc            | quoted array    |
 
 The interpreter needs to understand when to evaluate an argument.  The
-distinction between a "literal" and "executable" is the key.
+distinction between a "literal" and "executable" is the key.  For the
+"proc" type, its origin from the Execution Stack is also important.
 
 ** Quoting and execution
 
@@ -376,11 +389,7 @@ See the [[https://developer.mozilla.org/en/drawing_graphics_with_canvas#section_
 #+html: <div id="bowtie">
 #+include "bowtie.wps" src ps
 #+html: </div>
-#+begin_html
-<script>
-wps($("xbowtie"), [$$("wps"), $$("bowtie")]);
-</script>
-#+end_html
+#+html: <script>wps.parse("save (xbowtie) .setGc", $$("bowtie"), "restore");</script>
 
 ** Analog clock example
 
@@ -393,18 +402,13 @@ Click on the clock to start/stop it.
 #+html: <div id="clock2">
 #+include "clock2.wps" src ps
 #+html: </div>
-#+begin_html
-<script>
-wps($("xclock2"), [$$("wps"), $$("clock2")]);
-</script>
-#+end_html
+#+html: <script>(new Wps).parse($$("wps"), "(xclock2) .setGc", $$("clock2"));</script>
 
 Running the clock keeps the CPU noticeably busy.  Chrome is best with
-very little overhead, followed by Opera, and Firefox significantly
-worse than the previous two browsers.  WPS seems to be fast enough for
-one-off drawings, but its usability when running the interpreter in a
-tight loop, depends on the efficiency of the host JavaScript
-interpreter.
+very little overhead.  Firefox and Opera perform significantly worse.
+WPS seems to be fast enough for one-off drawings, but its usability
+depends on the efficiency of the host JavaScript interpreter when
+running the interpreter in a tight loop.
 
 ** Fill example
 
@@ -414,11 +418,7 @@ See the [[https://developer.mozilla.org/samples/canvas-tutorial/4_1_canvas_fills
 #+html: <div id="fill">
 #+include "fill.wps" src ps
 #+html: </div>
-#+begin_html
-<script>
-wps($("xfill"), [$$("wps"), $$("fill")]);
-</script>
-#+end_html
+#+html: <script>wps.parse("save (xfill) .setGc", $$("fill"), "restore");</script>
 
 ** Tiger example
 
@@ -436,6 +436,7 @@ The [[http://svn.ghostscript.com/viewvc/trunk/gs/examples/tiger.eps?view=co][ori
 
 #+begin_html
 <div id="tiger1" style="display:none">
+(xtiger) .setGc
 0 0 567 739 .gbox
 1 0 0 -1 0 739 .transform
 /time1 .date (getTime) 0 .call def
@@ -447,7 +448,7 @@ The [[http://svn.ghostscript.com/viewvc/trunk/gs/examples/tiger.eps?view=co][ori
 </div>
 
 <script>
-function tiger() {wps($("xtiger"), [$$("wps"), $$("tiger1"), $$("tiger"), $$("tiger2")]);}
+function tiger() {(new Wps).parse($$("wps"), $$("tiger1"), $$("tiger"), $$("tiger2"));}
 </script>
 <button onclick="javascript:tiger();">Draw</button> the tiger (be patient).
 #+end_html
@@ -457,26 +458,27 @@ Is this an interesting JavaScript and canvas benchmark?
 #+plot: title:"tiger.eps drawing times" ind:1 deps:(2 3 4) type:2d with:histograms set:"yrange [0:]" set:"xlabel 'browser'" set:"ylabel 'time [s]'" set:"style histogram gap 3" file:"tiger.png" set:"term png size 600, 300"
 | browser          | WPS time [s] | WPS time (no bind) [s] | PostCanvas time [s] |
 |------------------+--------------+------------------------+---------------------|
-| Chrome           |          2.5 |                    3.8 |                 1.6 |
-| Opera            |         15.9 |                   13.4 |                     |
-| Firefox 3.0      |         15.4 |                   19.5 |                 7.4 |
-| Firefox 3.5      |         11.6 |                        |                     |
+| Chrome           |          2.7 |                    4.1 |                 1.6 |
+| Opera            |         17.9 |                   12.3 |                 0   |
+| Firefox 3.0      |         21.0 |                   19.0 |                 7.4 |
+| Firefox 3.5      |         13.0 |                    9.5 |                 0   |
 
-[[http://www.feiri.de/pcan/][PostCanvas]] runs this [[http://www.feiri.de/pcan/example1.html][example]] about 1.5 times (Chrome) to 2 times
-(Firefox) faster.  I am actually surprised that WPS runs only up to 2
-times slower even though it interprets almost everything with minimal
-number of operators coded directly in JavaScript (compared to
-PostCanvas which implements all operators directly in JavaScript).
+[[http://www.feiri.de/pcan/][PostCanvas]] runs this [[http://www.feiri.de/pcan/example1.html][example]] about 1.5 times (Chrome) to 3 times
+(Firefox) faster.  I am actually surprised that WPS runs only about
+1.5 times slower in Chrome even though it interprets almost everything
+with minimal number of operators coded directly in JavaScript
+(compared to PostCanvas which implements all operators directly in
+JavaScript).
 
 Another surprise to me is that I expected more significant speed up
-after implementing the {{{ps(bind)}}} operator.  Why does Opera get
-slower in this case?
+after implementing the {{{ps(bind)}}} operator.  Why does Opera and
+Firefox get slower in this case?
 
-It should be fairly easy to speed up WPS by adding more operators
+It should be fairly easy to speed up WPS by coding more operators
 implemented directly in JavaScript.  This could be done dynamically by
 redefining/rebinding existing operators to their optimized JavaScript
-version.  The speed of PostCanvas could probably be taken as the best
-case that could be achieved by optimizing WPS though.
+versions.  The speed of PostCanvas could probably be taken as the best
+case that could be achieved by optimizing WPS.
 
 file:tiger.png
 
@@ -488,15 +490,15 @@ really needed to get proper image as intended.
 
 It is also interesting to observe that PDF operators and their names
 probably came up from shortening/compressing "user-space" PostScript
-operators in final PostScript files.  The tiger.eps file was created
-in 1990 and contains some "shortcuts" that match PDF operators
-standardised later.
+operators in PostScript files.  The tiger.eps file was created in 1990
+and contains some "shortcuts" that match PDF operators standardised
+later.
 
 * Drawing with PDF
 
-PDF is rather complex format.  WPS implements only drawing operators
-that can be present in PDF content streams.  The number of these
-operators is fixed and limited.  Even though the full PostScript
+PDF is rather complex format.  WPS aims to implement only drawing
+operators that can be present in PDF content streams.  The number of
+these operators is fixed and limited.  Even though the full PostScript
 language is not required, it can be convenient to implement them in
 PostScript.
 
@@ -522,11 +524,7 @@ See also the [[https://developer.mozilla.org/samples/canvas-tutorial/2_6_canvas_
 #+html: <div id="heart">
 #+include "heart.wps" src ps
 #+html: </div>
-#+begin_html
-<script>
-wps($("xheart"), [$$("wps"), $$("heart")]);
-</script>
-#+end_html
+#+html: <script>wps.parse("save (xheart) .setGc", $$("heart"), "restore");</script>
 
 ** Rectangle example
 
@@ -534,11 +532,7 @@ wps($("xheart"), [$$("wps"), $$("heart")]);
 #+html: <div id="rect">
 #+include "rect.wps" src ps
 #+html: </div>
-#+begin_html
-<script>
-wps($("xrect"), [$$("wps"), $$("rect")]);
-</script>
-#+end_html
+#+html: <script>wps.parse("save (xrect) .setGc", $$("rect"), "restore");</script>
 
 ** Triangles example
 
@@ -548,11 +542,7 @@ See also the [[https://developer.mozilla.org/samples/canvas-tutorial/2_3_canvas_
 #+html: <div id="triangles">
 #+include "triangles.wps" src ps
 #+html: </div>
-#+begin_html
-<script>
-wps($("xtriangles"), [$$("wps"), $$("triangles")]);
-</script>
-#+end_html
+#+html: <script>wps.parse("save (xtriangles) .setGc", $$("triangles"), "restore");</script>
 
 ** Smile example
 
@@ -562,11 +552,7 @@ See also the [[http://developer.mozilla.org/samples/canvas-tutorial/2_2_canvas_m
 #+html: <div id="smile">
 #+include "smile.wps" src ps
 #+html: </div>
-#+begin_html
-<script>
-wps($("xsmile"), [$$("wps"), $$("smile")]);
-</script>
-#+end_html
+#+html: <script>wps.parse("save (xsmile) .setGc", $$("smile"), "restore");</script>
 
 ** Star example
 
@@ -576,11 +562,7 @@ See also the [[http://www.adobe.com/technology/pdfs/presentations/KingPDFTutoria
 #+html: <div id="star">
 #+include "star.wps" src ps
 #+html: </div>
-#+begin_html
-<script>
-wps($("xstar"), [$$("wps"), $$("star")]);
-</script>
-#+end_html
+#+html: <script>wps.parse("save (xstar) .setGc", $$("star"), "restore");</script>
 
 ** Squares example
 
@@ -590,11 +572,7 @@ See also the [[https://developer.mozilla.org/samples/canvas-tutorial/5_1_canvas_
 #+html: <div id="squares">
 #+include "squares.wps" src ps
 #+html: </div>
-#+begin_html
-<script>
-wps($("xsquares"), [$$("wps"), $$("squares")]);
-</script>
-#+end_html
+#+html: <script>wps.parse("save (xsquares) .setGc", $$("squares"), "restore");</script>
 
 ** Two squares example
 
@@ -604,11 +582,7 @@ See also the [[https://developer.mozilla.org/en/drawing_graphics_with_canvas][or
 #+html: <div id="squares2">
 #+include "squares2.wps" src ps
 #+html: </div>
-#+begin_html
-<script>
-wps($("xsquares2"), [$$("wps"), $$("squares2")]);
-</script>
-#+end_html
+#+html: <script>wps.parse("save (xsquares2) .setGc", $$("squares2"), "restore");</script>
 
 * Operators and JavaScript bindings
 
@@ -617,11 +591,11 @@ implemented in PostScript itself.
 
 Many JavaScript data types map quite easily to PostScript data types
 so native bindings can be implemented mostly in PostScript via
-PostScript dictionaries.  [[http://www.whatwg.org/specs/web-apps/current-work/#the-canvas-element][HTML 5 canvas API]] bindings are quite
-straightforward.  Probably the trickiest bit is implementing callbacks
-to handle [[http://en.wikipedia.org/wiki/Document_Object_Model][DOM]] events using PostScript code.
+PostScript dictionaries (JavaScript objects).  [[http://www.whatwg.org/specs/web-apps/current-work/#the-canvas-element][HTML 5 canvas API]]
+bindings are quite straightforward.  Probably the trickiest bit is
+implementing callbacks to handle [[http://en.wikipedia.org/wiki/Document_Object_Model][DOM]] events using PostScript code.
 
-** Built-in operators
+** Native operators
 
 | category       | in                      | operator         | out                                                         |
 |----------------+-------------------------+------------------+-------------------------------------------------------------|
@@ -929,4 +903,4 @@ implemented directly in JavaScript.  It is faster than WPS but not a
 
 [[http://svgkit.sourceforge.net/][SVGKit]] has a PostScript interpreter on the wish list.
 
-Postscript is a registered trademark of [[http://www.adobe.com][Adobe Systems Incorporated]].
+PostScript is a registered trademark of [[http://www.adobe.com][Adobe Systems Incorporated]].
