@@ -1,207 +1,241 @@
-%%% wps.wps -- postscript and pdf operators for html 5 canvas
 %%% (c) 2009 Tomas Hlavaty
 
-%% basic operators
+%% math
 
-/sub { % num num -- num
-  neg add
-} def
+/abs      {.math (abs) 1 .call} def
+/.acos    {.math (acos) 1 .call} def
+/.asin    {.math (asin) 1 .call} def
+/atan     {exch .math (atan) 1 .call} def
+/.atan2   {.math (atan2) 2 .call} def
+/ceiling  {.math (ceil) 1 .call} def
+/cos      {.math (cos) 1 .call} def
+/.exp     {.math (exp) 1 .call} def
+/floor    {.math (floor) 1 .call} def
+/log      {.math (log) 1 .call} def
+/.max     {.math (max) 2 .call} def
+/.min     {.math (min) 2 .call} def
+/.pow     {.math (pow) 2 .call} def
+/.random  {.math (random) 0 .call} def
+/rand     {.random} def % TODO follow spec
+/round    {.math (round) 1 .call} def
+/sin      {.math (sin) 1 .call} def
+/sqrt     {.math (sqrt) 1 .call} def
+/.tan     {.math (tan) 1 .call} def
+/truncate {.math (truncate) 1 .call} def % TODO Math.truncate does not exist!
 
-%% html5 operators
+/.e       {.math (E) get} def
+/.ln2     {.math (LN2) get} def
+/.ln10    {.math (LN10) get} def
+/.log2e   {.math (LOG2E) get} def
+/.log10e  {.math (LOG10E) get} def
+/.pi      {.math (PI) get} def
+/.sqrt1_2 {.math (SQRT1_2) get} def
+/.sqrt2   {.math (SQRT2) get} def
+
+/sub     {neg add} def
+/idiv    {div .floor} def
+
+%% html5
 
 /.gget { % key --
-  gc exch
+  .gc exch
   get
 } def
 
 /.gput { % any key --
-  gc 3 1 roll exch
+  .gc 3 1 roll exch
   put
 } def
 
-/.gcall { % key nargs --
-  gc 3 1 roll call
+/.gcall0 { % key nargs --
+  .gc 3 1 roll .call pop
+} def
+
+/.gcall1 { % key nargs -- result
+  .gc 3 1 roll .call
 } def
 
 /.gcanvas { % -- canvas
-  /canvas .gget
+  (canvas) .gget
 } def
 
 /.gdim { % w h --
-  .gcanvas exch /height exch put
-  .gcanvas exch /width exch put
+  .gcanvas exch (height) exch put
+  .gcanvas exch (width) exch put
 } def
 
-/gbox { % x0 y0 x1 y1 --
+/.gbox { % x0 y0 x1 y1 --
   % TODO compute properly
   .gdim
   pop
   pop
 } def
 
-/.save    {/save 0 .gcall} def
-/.restore {/restore 0 .gcall} def
+/.save    {(save) 0 .gcall0} def
+/.restore {(restore) 0 .gcall0} def
 
 /scale { % x y --
-  /scale 2 .gcall
+  (scale) 2 .gcall0
 } def
 
 /rotate { % angle --
-  /rotate 1 .gcall
+  (rotate) 1 .gcall0
 } def
 
 /translate { % x y --
-  /translate 2 .gcall
+  (translate) 2 .gcall0
 } def
 
-/transform { % m11 m12 m21 m22 dx dy --
-  /transform 6 .gcall
+/.transform { % m11 m12 m21 m22 dx dy --
+  (transform) 6 .gcall0
 } def
 
-/setTransform { % m11 m12 m21 m22 dx dy --
-  /setTransform 6 .gcall
+/.setTransform { % m11 m12 m21 m22 dx dy --
+  (setTransform) 6 .gcall0
 } def
 
-/createLinearGradient { % x0 y0 x1 y1 -- CanvasGradient
-  /createLinearGradient 4 .gcall
+/.createLinearGradient { % x0 y0 x1 y1 -- CanvasGradient
+  (createLinearGradient) 4 .gcall1
 } def
 
-/createRadialGradient { % x0 y0 r0 x1 y1 r1 -- CanvasGradient
-  /createRadialGradient 6 .gcall
+/.createRadialGradient { % x0 y0 r0 x1 y1 r1 -- CanvasGradient
+  (createRadialGradient) 6 .gcall1
 } def
 
-/createPattern { % image repetition -- CanvasPattern
-  /createPattern 2 .gcall
+/.createPattern { % image repetition -- CanvasPattern
+  (createPattern) 2 .gcall1
 } def
 
 /.clearRect { % x y w h --
-  /clearRect 4 .gcall
+  (clearRect) 4 .gcall0
 } def
 
 /.fillRect { % x y w h --
-  /fillRect 4 .gcall
+  (fillRect) 4 .gcall0
 } def
 
 /.strokeRect { % x y w h --
-  /strokeRect 4 .gcall
+  (strokeRect) 4 .gcall0
 } def
 
-/.beginPath {/.beginPath 0 .gcall} def
-/.closePath {/.closePath 0 .gcall} def
+/.beginPath {(beginPath) 0 .gcall0} def
+/.closePath {(closePath) 0 .gcall0} def
 
 /.moveTo { % x y --
-  /moveTo 2 .gcall
+  (moveTo) 2 .gcall0
 } def
 
 /.lineTo { % x y --
-  /lineTo 2 .gcall
+  (lineTo) 2 .gcall0
 } def
 
-/quadraticCurveTo { % cpx cpy x y --
-  /quadraticCurveTo 4 .gcall
+/.quadraticCurveTo { % cpx cpy x y --
+  (quadraticCurveTo) 4 .gcall0
 } def
 
-/bezierCurveTo { % cp1x cp1y cp2x cp2y x y --
-  /bezierCurveTo 6 .gcall
+/.bezierCurveTo { % cp1x cp1y cp2x cp2y x y --
+  (bezierCurveTo) 6 .gcall0
 } def
 
 /.arcTo { % x1 y1 x2 y2 radius --
-  /arcTo 5 .gcall
+  (arcTo) 5 .gcall0
 } def
 
-/rect { % x y w h --
-  /rect 4 .gcall
+/.rect { % x y w h --
+  (rect) 4 .gcall0
 } def
 
 /arc { % x y radius startAngle endAngle anticlockwise --
-  /arc 6 .gcall
+  (arc) 6 .gcall0
 } def
 
 /fill { % --
-  /fill 0 .gcall
+  (fill) 0 .gcall0
 } def
 
 /stroke { % --
-  /stroke 0 .gcall
+  (stroke) 0 .gcall0
 } def
 
 /clip { % --
-  /clip 0 .gcall
+  (clip) 0 .gcall0
 } def
 
-/isPointInPath { % x y -- boolean
-  /isPointInPath 2 .gcall
+/.isPointInPath { % x y -- boolean
+  (isPointInPath) 2 .gcall1
 } def
 
-/fillText { % text x y maxWidth --
-  /fillText 4 .gcall
+/.fillText { % text x y maxWidth --
+  (fillText) 4 .gcall0
 } def
 
-/strokeText { % text x y maxWidth --
-  /strokeText 4 .gcall
+/.strokeText { % text x y maxWidth --
+  (strokeText) 4 .gcall0
 } def
 
-/measureText { % text -- TextMetrics
-  /measureText 1 .gcall
+/.measureText { % text -- TextMetrics
+  (measureText) 1 .gcall1
 } def
 
-/drawImage1 { % image dx dy dw dh --
-  /drawImage1 5 .gcall
+/.drawImage1 { % image dx dy dw dh --
+  (drawImage1) 5 .gcall0
 } def
 
-/drawImage2 { % image sx sy sw sh dx dy dw dh --
-  /drawImage2 9 .gcall
+/.drawImage2 { % image sx sy sw sh dx dy dw dh --
+  (drawImage2) 9 .gcall0
 } def
 
-/createImageData1 { % imagedata -- ImageData
-  /createImageData1 1 .gcall
+/.createImageData1 { % imagedata -- ImageData
+  (createImageData1) 1 .gcall1
 } def
 
-/createImageData2 { % sw sh -- ImageData
-  /createImageData2 2 .gcall
+/.createImageData2 { % sw sh -- ImageData
+  (createImageData2) 2 .gcall1
 } def
 
-/getImageData { % sx sy sw sh --
-  /getImageData 4 .gcall
+/.getImageData { % sx sy sw sh --
+  (getImageData) 4 .gcall1
 } def
 
-/putImageData { % imagedata dx dy dirtyX dirtyY dirtyWidth dirtyHeight --
-  /putImageData 7 .gcall
+/.putImageData { % imagedata dx dy dirtyX dirtyY dirtyWidth dirtyHeight --
+  (putImageData) 7 .gcall0
 } def
 
-/getGlobalAlpha              {/globalAlpha .gget} def
-/getGlobalCompositeOperation {/globalCompositeOperation .gget} def % TODO str
-/getStrokeStyle              {/strokeStyle .gget} def % TODO str
-/getFillStyle                {/fillStyle .gget} def % TODO str
-/.getLineWidth               {/lineWidth .gget} def
-/.getLineCap                 {/lineCap .gget} def % TODO str
-/.getLineJoin                {/lineJoin .gget} def % TODO str
-/.getMiterLimit              {/miterLimit .gget} def
-/getShadowOffsetX            {/shadowOffsetX .gget} def
-/getShadowOffsetY            {/shadowOffsetY .gget} def
-/getShadowBlur               {/shadowBlur .gget} def
-/getShadowColor              {/shadowColor .gget} def % TODO str
-/.getFont                    {/font .gget} def % TODO str
-/getTextAlign                {/textAlign .gget} def % TODO str
-/getTextBaseline             {/textBaseline .gget} def % TODO str
+/.getGlobalAlpha              {(globalAlpha) .gget} def
+/.getGlobalCompositeOperation {(globalCompositeOperation) .gget} def
+/.getStrokeStyle              {(strokeStyle) .gget} def
+/.getFillStyle                {(fillStyle) .gget} def
+/.getLineWidth                {(lineWidth) .gget} def
+/.getLineCap                  {(lineCap) .gget} def
+/.getLineJoin                 {(lineJoin) .gget} def
+/.getMiterLimit               {(miterLimit) .gget} def
+/.getShadowOffsetX            {(shadowOffsetX) .gget} def
+/.getShadowOffsetY            {(shadowOffsetY) .gget} def
+/.getShadowBlur               {(shadowBlur) .gget} def
+/.getShadowColor              {(shadowColor) .gget} def
+/.getFont                     {(font) .gget} def
+/.getTextAlign                {(textAlign) .gget} def
+/.getTextBaseline             {(textBaseline) .gget} def
 
-/setGlobalAlpha              {/globalAlpha .gput} def
-/setGlobalCompositeOperation {/globalCompositeOperation .gput} def % TODO str
-/setStrokeStyle              {/strokeStyle .gput} def % TODO str
-/setFillStyle                {/fillStyle .gput} def % TODO str
-/.setLineWidth               {/lineWidth .gput} def
-/.setLineCap                 {/lineCap .gput} def % TODO str
-/.setLineJoin                {/lineJoin .gput} def % TODO str
-/.setMiterLimit              {/miterLimit .gput} def
-/setShadowOffsetX            {/shadowOffsetX .gput} def
-/setShadowOffsetY            {/shadowOffsetY .gput} def
-/setShadowBlur               {/shadowBlur .gput} def
-/setShadowColor              {/shadowColor .gput} def % TODO str
-/.setFont                    {/font .gput} def % TODO str
-/setTextAlign                {/textAlign .gput} def % TODO str
-/setTextBaseline             {/textBaseline .gput} def % TODO str
+/.setGlobalAlpha              {(globalAlpha) .gput} def
+/.setGlobalCompositeOperation {(globalCompositeOperation) .gput} def
+/.setStrokeStyle              {(strokeStyle) .gput} def
+/.setFillStyle                {(fillStyle) .gput} def
+/.setLineWidth                {(lineWidth) .gput} def
+/.setLineCap                  {(lineCap) .gput} def
+/.setLineJoin                 {(lineJoin) .gput} def
+/.setMiterLimit               {(miterLimit) .gput} def
+/.setShadowOffsetX            {(shadowOffsetX) .gput} def
+/.setShadowOffsetY            {(shadowOffsetY) .gput} def
+/.setShadowBlur               {(shadowBlur) .gput} def
+/.setShadowColor              {(shadowColor) .gput} def
+/.setFont                     {(font) .gput} def
+/.setTextAlign                {(textAlign) .gput} def
+/.setTextBaseline             {(textBaseline) .gput} def
 
-%% PostScript operators
+%% PostScript
+
+% TODO track state, e.g. origin x y
 
 /gsave     {.save} def
 /grestore  {.restore} def
@@ -251,112 +285,105 @@
 
 /setgray { % gray --
   255 mul dup dup
-  rgb setFillStyle
+  .rgb .setFillStyle
 } def
 
 /setrgbcolor { % r g b --
   3 {255 * 3 1 roll} repeat
-  rgb setFillStyle
+  .rgb .setFillStyle
 } def
 
 /setfont { % font --
   % TODO C.font = N + "pt " + F.V;
 } def
 
-%    F["save"] = function() {S.push(true);};
-%    F["restore"] = function() {S.push(true);};
-%    F["bind"] = function() {};
-%    F["dict"] = function() {};
-%    F["load"] = function() {};
-%    F["begin"] = function() {};
-%    F["end"] = function() {};
-%    F["where"] = function() {};
-%    F["currentflat"] = function() {};
-%    F["setflat"] = function() {};
-%    F["_"] = function() {};
-%    F["clippath"] = function() {};
-
-%% PDF operators
-
-/w {
-  setlinewidth
+/clippath { % --
+  % TODO
 } def
 
-/J {
-  setlinecap
+/show { % string --
+  % TODO
+  %0 exch 0 exch .fillText
+  .fillText
 } def
 
-/j {
-  setlinejoin
-} def
-
-/M {
-  setmitterlimit
-} def
-
-/q {gsave} def
-/Q {grestore} def
-
-/cm {
-  transform
-} def
-
-/m {
-  newpath % TODO only if not m previously
-  moveto
-} def
-
-/l {
+/rlineto { % x y --
+  % TODO
   lineto
 } def
 
-/c {
-  bezierCurveTo
-} def
+%% PDF
 
-/h {closepath} def
-
-/re {
-  rect
-} def
-
-/S  {stroke} def
-/s  {h S} def
-/f  {fill} def
-/F  {fill} def
-/B  {f S} def
-/B* {f* S} def
-/b  {h B} def
-/b* {h B*} def
-/W  {clip} def
-
-/Tf {
-  setfont
-} def
-
-/Tj {
-  fillText
-} def
-
-/rg {
-  % TODO other color spaces
-  3 {255 * 3 1 roll} repeat
-  rgb setFillStyle
-} def
-
-%% other operators
-
-/pi 3.141592653589 def
-
-/inch { % num --
-  72 mul
-} def
-
-%/black   {0 0 0 setrgbcolor} def
-%/red     {1 0 0 setrgbcolor} def
-%/green   {0 1 0 setrgbcolor} def
-%/blue    {0 0 1 setrgbcolor} def
-%/yellow  {1 1 0 setrgbcolor} def
-%/cyan    {0 1 1 setrgbcolor} def
-%/magenta {1 0 1 setrgbcolor} def
-%/white   {1 1 1 setrgbcolor} def
+/w   {setlinewidth} def
+/J   {setlinecap} def % TODO
+/j   {setlinejoin} def % TODO
+/M   {setmitterlimit} def
+/d   {setdash} def % TODO
+/ri  {} def % TODO
+/i   {} def % TODO
+/gs  {} def % TODO
+/q   {gsave} def
+/Q   {grestore} def
+/cm  {.transform} def
+/m   {newpath moveto} def % TODO only if not m previously
+/l   {lineto} def
+/c   {.bezierCurveTo} def
+/v   {currentpoint cp2 p3 c} def % TODO fix arg order
+/y   {cp1 p3 p3 c} def % TODO fix arg order
+/h   {closepath} def % TODO
+/re  {.rect} def % TODO really, or x y m , x+w y l , x+w y+h l , x y+h l , h
+/S   {stroke} def
+/s   {h S} def
+/f   {fill} def % TODO
+/F   {f} def
+/f*  {} def % TODO
+/B   {f S} def
+/B*  {f* S} def
+/b   {h B} def
+/b*  {h B*} def
+/n   {} def % TODO
+/W   {clip} def % TODO
+/W*  {clip} def % TODO
+/BT  {} def % TODO
+/ET  {} def % TODO
+/Tc  {} def % TODO
+/Tw  {} def % TODO
+/Tz  {} def % TODO
+/TL  {} def % TODO
+/Tf  {setfont} def % TODO
+/Tr  {} def % TODO
+/Ts  {} def % TODO
+/Td  {} def % TODO
+/TD  {} def % TODO
+/Tm  {} def % TODO
+/T*  {} def % TODO
+/Tj  {show} def % TODO
+/TJ  {} def % TODO
+%/'   {} def % TODO
+%/"   {} def % TODO
+/d0  {} def % TODO
+/d1  {} def % TODO
+/CS  {} def % TODO
+/cs  {} def % TODO
+/SC  {} def % TODO
+/SCN {} def % TODO
+/sc  {} def % TODO
+/scn {} def % TODO
+/G   {} def % TODO
+/g   {} def % TODO
+/RG  {} def % TODO
+/rg  {3 {255 * 3 1 roll} repeat .rgb .setFillStyle} def % TODO
+/K   {} def % TODO
+/k   {} def % TODO
+/sh  {} def % TODO
+/BI  {} def % TODO
+/ID  {} def % TODO
+/EI  {} def % TODO
+/Do  {} def % TODO
+/MP  {} def % TODO
+/DP  {} def % TODO
+/BMC {} def % TODO
+/BDC {} def % TODO
+/EMC {} def % TODO
+/BX  {} def % TODO
+/EX  {} def % TODO
