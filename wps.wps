@@ -13,24 +13,13 @@ systemdict/]
 systemdict/}/] cvx/cvx cvx 2 array astore cvx put
 systemdict/def{currentdict 2 index 2 index put pop pop}put
 
-/true .true def
-/false .false def
-/null .null def
 /maxlength 1000 def % TODO
-
 /.bdef{bind def}bind def
-
-%/.bdef 0 index where pop exch get =
-
 /.xdef{exch def}.bdef
 /dup{0 index}.bdef
 /load{dup where pop exch get}.bdef
 /.ldef{load def}.bdef
 /if{{}ifelse}.bdef
-
-%/dup load =
-%/if load =
-
 /cleartomark{array pop}.bdef
 /known{exch begin where{currentdict eq}{false}if end}.bdef
 /store{1 index where{3 1 roll put}{def}ifelse}.bdef
@@ -43,42 +32,7 @@ systemdict/def{currentdict 2 index 2 index put pop pop}put
 /ge{lt not}.bdef
 /le{1 index 1 index eq 3 1 roll lt or}.bdef
 /gt{le not}.bdef
-
-%/and load =
-%false false and =
-%false true and =
-%true false and =
-%true true and =
-%pstack
-
 /.repeat{1 1 4 2 roll for}.bdef
-%//     var B = Os.pop();
-%//     var N = Os.pop();
-%//     if(1 < N) Es.push([true, N - 1, B, Xrepeat]);
-%//     if(0 < N) Es.push([false, B, Xexec]);
-% /repeat{ % n b
-%   exch 2 copy dup % b n, b n n
-%   1 gt{-1 add exch/repeat cvx exec}{pop pop}ifelse
-%   0 gt{exec}{pop}ifelse
-% } def
-% /repeat{ % n b
-%   exch % b n
-%   2 copy % b n b n
-%   0 gt pstack{exec}{pop}ifelse % b n
-%   pop pop
-% %  dup 1 gt{-1 add exch repeat}{pop pop}ifelse
-% } def
-% /repeat { % n b
-%   2 dict begin
-%     /b .xdef
-%     /n .xdef
-%     0 n lt b if
-%     1 n lt {n 1 sub b repeat} if
-%   end
-% } def
-%/repeat{/pop cvx exch/exec cvx 3 array astore cvx 1 1 4 2 roll for}.bdef
-%/loop{0 exch 0 exch 1 exch for}.bdef % TODO
-%/exit{}.bdef % TODO
 
 %% math
 
@@ -125,14 +79,9 @@ systemdict/def{currentdict 2 index 2 index put pop pop}put
 /.clearInterval{.window(clearInterval)1 .call pop}.bdef % id --
 /.document{.window(document)get}.bdef % -- document
 /.getElementById{.document(getElementById)1 .call}.bdef % id -- w
-
-%/.attachEvent{3 2 roll(attachEvent)2 .call pop}.bdef % e k fn --
-%/.setAttribute{3 2 roll(setAttribute)2 .call pop}.bdef % e k v --
 /.hook{put}.bdef % e k cb --
-%if( td.attachEvent ) td.attachEvent('onclick', 'alert("blabla")');
-% else td.setAttribute('onclick', 'alert("blabla")');
 
-%% html5
+%% canvas
 
 /.setGc{.getElementById(2d)exch(getContext)1 .call/.$gc .xdef}.bdef
 /.gc{/.$gc load}.bdef
@@ -143,8 +92,6 @@ systemdict/def{currentdict 2 index 2 index put pop pop}put
 /.gcanvas{(canvas).gget}.bdef
 /.gdim{.gcanvas exch(height)exch put .gcanvas exch(width)exch put}.bdef
 /.gbox{.gdim pop pop}.bdef % TODO compute properly
-
-%% canvas
 
 /.save{(save)0 .gcall0}.bdef
 /.restore{(restore)0 .gcall0}.bdef
@@ -240,9 +187,6 @@ systemdict/def{currentdict 2 index 2 index put pop pop}put
 /currentmatrix{pop /.$tm load}.bdef % TODO fill
 initmatrix
 
-%/matrix load =
-%matrix =
-
 /.getTmd{/.$tmd load}.bdef
 /.setTmd{/.$tmd .xdef}.bdef
 /.resetTmd{matrix .setTmd}.bdef
@@ -255,8 +199,8 @@ initmatrix
   dup currentmatrix exch .mmul setmatrix % = .$tm x m
 }.bdef
 
-/transform{dup type(arraytype)ne{.getTmd}if .xy}.bdef % TODO why .$tmd not .$tm?
-/itransform{dup type(arraytype)ne{.getTmd}if .minv .xy}.bdef % TODO why .$tmd not .$tm?
+/transform{dup type(arraytype)ne{.getTmd}if .xy}.bdef
+/itransform{dup type(arraytype)ne{.getTmd}if .minv .xy}.bdef
 
 /.scaleM{0 0 3 2 roll 0 0 6 array astore}.bdef % x y -- [x 0 0 y 0 0]
 /.scale3{pop .scaleM}.bdef
@@ -427,85 +371,6 @@ initmatrix
 /EMC{}.bdef % TODO
 /BX{}.bdef % TODO
 /EX{}.bdef % TODO
-
-% /Operators 50 dict begin
-%   /cs { //ResolveColorSpace exec //SetColorSpaceSafe exec
-%       } bind def
-%   /scn { //SetColor exec } bind def
-%   /CS //cs def
-%   /SCN { //SetColor exec } bind def
-
-%   /re {
-%     4 2 roll moveto  exch dup 0 rlineto  0 3 -1 roll rlineto  neg 0 rlineto
-%     closepath
-%   } def
-%   /sh { % Reserved for ps3write.
-%         ResolveShading 
-%         dup /Background known {
-%           gsave
-%           dup /ColorSpace get setcolorspace
-%           dup /Background get aload pop setcolor
-%           pathbbox               % x0 y0 x1 y1
-%           2 index sub exch 3 index sub exch
-%           rectfill
-%           grestore
-%         } if
-%         shfill 
-%       } bind def
-
-%   /Do { //DoXObject exec } bind def
-
-%   /BI { currentglobal false setglobal << } bind def
-%   /ID { >>
-%         dup /DataSource currentfile 
-%         % HACK BEG
-%         % This hack provides a compatibility to HP LaserJet 1320,
-%         % which sometimes closes the underlying stream when EOD 
-%         % is reached in the ASCII85Decode filter.
-%         % This portion is not required by the Postscript language definition.
-%         2 index /F //knownget exec {
-%           /A85 eq {
-%             0 (~>) /SubFileDecode filter 
-%           } if
-%         } if
-%         % HACK END
-%         put
-%         //CompleteInlineImage exec
-%         exch setglobal
-%         //DoImage exec
-%       } bind def
-%   /EI {} bind def
-
-%   /BT { gsave //GraphicState /InitialTextMatrix get currentmatrix pop } bind def
-%   /Tc { //GraphicState exch /CharacterSpacing exch put } bind def
-%   /TL { //GraphicState exch /TextLeading exch put } bind def
-%   /Tr { //GraphicState exch /TextRenderingMode exch put } bind def
-%   /Ts {  % Ghostscript never generates it.
-%         mark (Unimplemented SetTextRise) //error exec
-%       } bind def
-%   /Tw { //GraphicState exch /WordSpacing exch put } bind def
-%   /Tz { % Ghostscript never generates it.
-%             mark (Unimplemented SetHorizontalTextScaling) //error exec
-%       } bind def
-%   /TD { dup neg //TL exec //Td exec } bind def
-%   /Tm { //GraphicState /InitialTextMatrix get setmatrix
-%         //TempMatrix astore concat
-%         0 0 moveto } bind def
-%   /T* { 0 //GraphicState /TextLeading get neg //Td exec } bind def
-%   /Tj { //ShowTextBeg exec  //ShowText exec  //ShowTextEnd exec } bind def
-%   /'  { //T* exec  //ShowText exec  //ShowTextEnd exec } bind def
-%   /"  { 3 2 roll //Tw exec exch //Tc exec //' exec} bind def
-%   /TJ //ShowTextWithGlyphPositioning def
-%   /Tf //SetFont def
-
-%   /BDC { BeginMarkedContentSequenceWithPropertyList } bind def
-%   /BMC { BeginMarkedContentSequence } bind def
-%   /EMC { EndMarkedContentSequence } bind def
-%   /BX { BeginCompatibilitySection } bind def
-%   /EX { EndCompatibilitySection } bind def
-%   /DP { DefineMarkedContentPointWithPropertyList } bind def
-%   /MP { DefineMarkedContentPoint } bind def
-% currentdict end def
 
 %% finish
 
