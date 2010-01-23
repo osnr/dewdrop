@@ -1032,3 +1032,22 @@ do better than http://processingjs.org/ http://processingjs.org/reference
 try 3d interface in chrome
 
 reactive programming http://conal.net/fran/tutorial.htm
+
+
+* LINKS
+
+http://www.math.ubc.ca/~cass/graphics/manual/
+
+http://www.anastigmatix.net/postscript/MetaPre.html
+
+http://svn.ghostscript.com/ghostscript/branches/icc_work/psi/estack.h
+
+https://dev.mobileread.com/trac/iliados/browser/upstream/poppler/test/pdf-operators.c
+
+http://developer.apple.com/documentation/GraphicsImaging/Conceptual/drawingwithquartz2d/dq_paths/dq_paths.html#//apple_ref/doc/uid/TP30001066-CH211-DontLinkElementID_10
+
+http://easyweb.easynet.co.uk/~mrmeanie/matrix/matrices.htm
+
+https://developer.mozilla.org/samples/canvas-tutorial/6_2_canvas_clipping.html
+
+https://developer.mozilla.org/samples/canvas-tutorial/5_2_canvas_translate.html
