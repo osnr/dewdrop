@@ -2,27 +2,28 @@
 % http://oreilly.com/openbook/cgi/ch06_02.html
 
 0 0 150 150 .gbox
-1 0 0 -1 0 150 cm
+0 150 translate
+1 -1 scale
 
 /max      150 def
 /width    1.5 def
 /marker   5 def
 /origin   {0 0} def
-/center   {max 2 div} def
-/radius   center def
+/center   {max 2 div} bind def
+/radius   /center load def
 /hsegment 0.50 radius mul def
 /msegment 0.80 radius mul def
 /ssegment 0.90 radius mul def
 
-/yellow {1 1 0 setrgbcolor} def
-/red    {1 0 0 setrgbcolor} def
-/green  {0 1 0 setrgbcolor} def
-/blue   {0 0 1 setrgbcolor} def
-/black  {0 0 0 setrgbcolor} def
+/yellow {1 1 0 setrgbcolor} bind def
+/red    {1 0 0 setrgbcolor} bind def
+/green  {0 1 0 setrgbcolor} bind def
+/blue   {0 0 1 setrgbcolor} bind def
+/black  {0 0 0 setrgbcolor} bind def
 
-/hangle {$h 12 div 360 mul neg .deg2rad} def % TODO smooth motion
-/mangle {$m 60 div 360 mul neg .deg2rad} def
-/sangle {$s 60 div 360 mul neg .deg2rad} def
+/hangle {/$h load 60 mul /$m load add 2 div neg .deg2rad} bind def
+/mangle {/$m load 6 mul neg .deg2rad} bind def
+/sangle {/$s load 6 mul neg .deg2rad} bind def
 
 /hand { % segment angle color width --
   origin moveto
@@ -31,7 +32,7 @@
   2 copy   cos mul
   3 1 roll sin mul
   lineto stroke
-} def
+} bind def
 
 /draw {
   gsave
@@ -55,13 +56,13 @@
   ssegment sangle /yellow 0.5 hand % second
   origin width 2 mul 0 360 arc red fill % dot
   grestore
-} def
+} bind def
 
 draw
 
 /timer    false def
-/go       {{draw} .callback 1000 .setInterval /timer exch def} def
-/halt     {timer .clearTimeout /timer false def} def
-/callback {timer type (booleantype) eq {go} {halt} ifelse} def
+/go       {{draw} .callback 1000 .setInterval /timer exch def} bind def
+/halt     {/timer load .clearTimeout /timer false def} bind def
+/callback {/timer load type (booleantype) eq {go} {halt} ifelse} bind def
 
-.gcanvas (onclick) /callback cvx .callback .hook
+.gcanvas (onclick) /callback load .callback .hook
