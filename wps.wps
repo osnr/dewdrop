@@ -134,6 +134,8 @@ systemdict/def{currentdict 2 index 2 index put pop pop}put
 
 %% html5
 
+/.setGc{.getElementById(2d)exch(getContext)1 .call/.$gc .xdef}.bdef
+/.gc{/.$gc load}.bdef
 /.gget{.gc exch get}.bdef
 /.gput{.gc 3 1 roll exch put}.bdef
 /.gcall0{.gc 3 1 roll .call pop}.bdef
@@ -221,41 +223,40 @@ systemdict/def{currentdict 2 index 2 index put pop pop}put
 /.deg2rad{.pi 180 div mul}.bdef
 /.rad2deg{180 .pi div mul}.bdef
 
-/.cx 0 def
-/.cy 0 def
-/.px 0 def
-/.py 0 def
-/.setPoint{/.cy .xdef/.cx .xdef}.bdef
-/.setPath{/.py .xdef/.px .xdef}.bdef
-/currentpoint{/.cx load /.cy load}.bdef
-/.getPath{/.px load /.py load}.bdef
+/.$cx 0 def
+/.$cy 0 def
+/.$px 0 def
+/.$py 0 def
+/.setPoint{/.$cy .xdef/.$cx .xdef}.bdef
+/.setPath{/.$py .xdef/.$px .xdef}.bdef
+/currentpoint{/.$cx load /.$cy load}.bdef
+/.getPath{/.$px load /.$py load}.bdef
 
 /identmatrix{pop [1 0 0 1 0 0]}.bdef % TODO fill
 /matrix{6 array identmatrix}.bdef
-/setmatrix{/.tm .xdef}.bdef
+/setmatrix{/.$tm .xdef}.bdef
 /defaultmatrix{pop matrix}.bdef % TODO fill
 /initmatrix{matrix defaultmatrix setmatrix}.bdef
-/currentmatrix{pop /.tm load}.bdef % TODO fill
+/currentmatrix{pop /.$tm load}.bdef % TODO fill
 initmatrix
 
 %/matrix load =
 %matrix =
 
-/.getTmd{/.tmd load}.bdef
-/.setTmd{/.tmd .xdef}.bdef
+/.getTmd{/.$tmd load}.bdef
+/.setTmd{/.$tmd .xdef}.bdef
 /.resetTmd{matrix .setTmd}.bdef
 .resetTmd
 
 /.update{ % m --
-  %dup .cx exch .cy exch % m .cx .cy m
-  currentpoint 2 index % m .cx .cy m
+  currentpoint 2 index % m .$cx .$cy m
   .xy .setPoint % m
-  dup .getTmd exch .mmul .setTmd % (.tmd x m)
-  dup currentmatrix exch .mmul setmatrix % = .tm x m
+  dup .getTmd exch .mmul .setTmd % (.$tmd x m)
+  dup currentmatrix exch .mmul setmatrix % = .$tm x m
 }.bdef
 
-/transform{dup type(arraytype)ne{.getTmd}if .xy}.bdef % TODO why .tmd not .tm?
-/itransform{dup type(arraytype)ne{.getTmd}if .minv .xy}.bdef % TODO why .tmd not .tm?
+/transform{dup type(arraytype)ne{.getTmd}if .xy}.bdef % TODO why .$tmd not .$tm?
+/itransform{dup type(arraytype)ne{.getTmd}if .minv .xy}.bdef % TODO why .$tmd not .$tm?
 
 /.scaleM{0 0 3 2 roll 0 0 6 array astore}.bdef % x y -- [x 0 0 y 0 0]
 /.scale3{pop .scaleM}.bdef
@@ -271,7 +272,6 @@ initmatrix
 /.rotate2{pop .deg2rad .rotateM}.bdef
 /.rotate1{.deg2rad dup .rotateM .update .rotate}.bdef
 /rotate{dup type(arraytype)eq{.rotate2}{.rotate1}ifelse}.bdef
-
 
 %matrix concat – 	Replace CTM by matrix ´ CTM
 %matrix1 matrix2 matrix3 concatmatrix matrix3 	Fill matrix3 with matrix1 ´ matrix2
@@ -308,18 +308,16 @@ initmatrix
 
 /setgray{255 mul dup dup .rgb dup .setStrokeStyle .setFillStyle}.bdef
 /setrgbcolor{3{255 mul round 3 1 roll}repeat .rgb dup .setStrokeStyle .setFillStyle}.bdef
-/setfont{}.bdef % TODO C.font = N + "pt " + F.V;
+/setcmykcolor{setrgbcolor pop}.bdef % TODO
+/sethsbcolor{setrgbcolor}.bdef % TODO
 /clippath{0 0 .gcanvas(width)get .gcanvas(height)get .rect}.bdef % TODO
 /show{currentpoint 3 2 roll 3 copy .fillText .strokeText}.bdef % TODO
 
-%/rlineto{.getTmd .xy .py add exch .px add exch .getTmd .minv .xy lineto}.bdef
-/rlineto{.getTmd .xy /.py load add exch /.px load add exch .getTmd .minv .xy lineto}.bdef
+/rlineto{.getTmd .xy /.$py load add exch /.$px load add exch .getTmd .minv .xy lineto}.bdef
 /curveto{2 copy .setPoint 2 copy .setPath .resetTmd .bezierCurveTo}.bdef
 
 /currentflat{42}.bdef % TODO
 /setflat{pop}.bdef % TODO
-
-/showpage{}.bdef % TODO
 
 /arc{.deg2rad exch .deg2rad exch true .arc}.bdef % TODO currentpoint
 /arcn{.deg2rad exch .deg2rad exch false .arc}.bdef % TODO currentpoint
@@ -330,7 +328,29 @@ initmatrix
 
 /stroke{.stroke newpath currentpoint .moveTo}.bdef
 
+/showpage{}.bdef % TODO
 /grestoreall{}.bdef % TODO
+/readonly{}.bdef % TODO
+/currentfile{(url?)}.bdef % TODO
+/eexec{pop}.bdef % TODO
+/findfont{}.bdef % TODO
+/scalefont{pop}.bdef % TODO
+/setfont{pop}.bdef % TODO C.font = N + "pt " + F.V;
+/stopped{}.bdef % TODO
+/loop{}.bdef % TODO !!!
+/string{}.bdef % TODO
+/cvi{}.bdef % TODO
+/pathbbox{}.bdef % TODO
+/urx{}.bdef % TODO
+/ury{}.bdef % TODO
+/llx{}.bdef % TODO
+/lly{}.bdef % TODO
+/pagewidth{}.bdef % TODO
+/pageheight{}.bdef % TODO
+/inwidth{}.bdef % TODO
+/inheight{}.bdef % TODO
+/usertime{}.bdef % TODO
+/srand{}.bdef % TODO
 
 %% PDF
 
