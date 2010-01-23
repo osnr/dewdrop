@@ -14,12 +14,12 @@
   -25  25 lineto
   closepath
   fill
-} def
+} bind def
 
 /bowtieDot { % --
   0 0 0 setrgbcolor
   -2 -2 4 4 rectfill
-} def
+} bind def
 
 /bowtie1 { % fillStyle angle x y --
   gsave
@@ -28,7 +28,7 @@
   bowtie
   bowtieDot
   grestore
-} def
+} bind def
 
 45 45 translate
 (red)      0  0  0 bowtie1
