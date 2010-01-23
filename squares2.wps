@@ -1,0 +1,14 @@
+% based on the JavaScript example from
+% https://developer.mozilla.org/en/drawing_graphics_with_canvas
+
+q
+0.8 0 0 rg
+0 0 m
+10 10 55 50 re
+f
+0 0 0.8 rg
+0.5 .setGlobalAlpha
+0 0 m
+30 30 55 50 re
+f
+Q

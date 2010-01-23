@@ -1,0 +1,13 @@
+% based on the PDF example from
+% http://www.adobe.com/technology/pdfs/presentations/KingPDFTutorial.pdf
+
+q
+0 0 1 rg
+4 0 0 4 50 50 cm
+ 0  5.5 m
+-4 -5.5 l
+ 6  1   l
+-6  1   l
+ 4 -5.5 l
+f
+Q

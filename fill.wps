@@ -1,0 +1,15 @@
+% based on the JavaScript example from
+% https://developer.mozilla.org/samples/canvas-tutorial/4_1_canvas_fillstyle.html
+
+4 dict begin
+  0 1 5 {
+    /i exch def
+    /ii 255 255 5 div i mul sub def
+    0 1 5 {
+      /j exch def
+      /jj 255 255 5 div j mul sub def
+      ii jj 0 .rgb .setFillStyle
+      25 j mul 25 i mul 25 25 rectfill
+    } for
+  } for
+end

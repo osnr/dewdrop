@@ -1,0 +1,19 @@
+%%% -*- ps -*-
+%%%
+%%% based on the JavaScript example from
+%%% https://developer.mozilla.org/samples/canvas-tutorial/5_1_canvas_savestate.html
+
+q
+0 0 m 0 0 150 150 re f
+q
+0 153 255 rg
+0 0 m 15 15 120 120 re f
+q
+255 255 255 rg
+0.5 /globalAlpha gput
+0 0 m 30 30 90 90 re f
+Q
+0 0 m 45 45 60 60 re f
+Q
+0 0 m 60 60 30 30 re f
+Q

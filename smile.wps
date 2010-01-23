@@ -1,0 +1,18 @@
+% based on the JavaScript example from
+% http://developer.mozilla.org/samples/canvas-tutorial/2_2_canvas_moveto.html
+
+0 0 150 150 .gbox
+
+%0 0 m
+newpath
+75 75 50 0 360 arc
+S
+110 75 m
+75 75 35 0 180 arc
+S
+65 65 m
+60 65 5 0 360 arc
+S
+95 65 m
+90 65 5 0 360 arc
+S

@@ -1,0 +1,37 @@
+% based on the JavaScript example from
+% https://developer.mozilla.org/en/drawing_graphics_with_canvas
+
+0 0 180 180 .gbox
+
+/bowtie { % fillStyle --
+  200 200 200 0.3 .rgba .setFillStyle
+  -30 -30 60 60 rectfill
+  .setFillStyle 1.0 .setGlobalAlpha
+  newpath
+   25  25 moveto
+  -25 -25 lineto
+   25 -25 lineto
+  -25  25 lineto
+  closepath
+  fill
+} def
+
+/bowtieDot { % --
+  0 0 0 setrgbcolor
+  -2 -2 4 4 rectfill
+} def
+
+/bowtie1 { % fillStyle angle x y --
+  gsave
+  translate
+  .deg2rad rotate
+  bowtie
+  bowtieDot
+  grestore
+} def
+
+45 45 translate
+(red)      0  0  0 bowtie1
+(green)   45 85  0 bowtie1
+(blue)   135  0 85 bowtie1
+(yellow)  90 85 85 bowtie1

@@ -1,0 +1,9 @@
+0 0 170 170 .gbox
+
+1 0 0 1 80 80 cm
+0 72 m
+72 0 l
+0 -72 l
+-72 0 l
+4 setlinewidth
+h S

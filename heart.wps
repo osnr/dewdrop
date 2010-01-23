@@ -1,0 +1,13 @@
+% based on the JavaScript example from
+% https://developer.mozilla.org/samples/canvas-tutorial/2_6_canvas_beziercurveto.html
+
+q
+75 40 m
+75 37 70 25 50 25 c
+20 25 20 62.5 20 62.5 c
+20 80 40 102 75 120 c
+110 102 130 80 130 62.5 c
+130 62.5 130 25 100 25 c
+85 25 75 37 75 40 c
+f
+Q

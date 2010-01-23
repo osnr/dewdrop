@@ -1,0 +1,64 @@
+% based on the PostScript example from
+% http://oreilly.com/openbook/cgi/ch06_02.html
+
+/max      150 def
+/width    1.5 def
+/marker   5 def
+/origin   {0 0} def
+/center   {max 2 div} def
+/radius   center def
+/hsegment 0.50 radius mul def
+/msegment 0.80 radius mul def
+/ssegment 0.90 radius mul def
+
+/yellow {1 1 0 setrgbcolor} def
+/red    {1 0 0 setrgbcolor} def
+/green  {0 1 0 setrgbcolor} def
+/blue   {0 0 1 setrgbcolor} def
+/black  {0 0 0 setrgbcolor} def
+
+/hangle {$h 12 div .pi 2 mul mul neg} def % TODO smooth motion
+/mangle {$m 60 div .pi 2 mul mul neg} def
+/sangle {$s 60 div .pi 2 mul mul neg} def
+
+/hand { % segment angle color width --
+  origin moveto
+  width mul setlinewidth
+  cvx exec
+  2 copy   cos mul
+  3 1 roll sin mul
+  lineto stroke
+} def
+
+/draw {
+  gsave
+  /$h .date (getHours)   0 .call def
+  /$m .date (getMinutes) 0 .call def
+  /$s .date (getSeconds) 0 .call def
+  width setlinewidth
+  black clippath fill % background
+  center dup translate
+  90 .deg2rad rotate
+  gsave % markers
+  12 {
+    radius marker sub 0 moveto 
+    marker 0 rlineto red stroke
+    .pi 6 div rotate
+  } repeat
+  grestore
+  newpath origin radius 0 360 arc blue stroke % circle
+  hsegment hangle /green  2   hand % hour
+  msegment mangle /green  1   hand % minute
+  ssegment sangle /yellow 0.5 hand % second
+  origin width 2 mul 0 360 arc red fill % dot
+  grestore
+} def
+
+draw
+
+/timer    false def
+/go       {{draw} .callback 1000 .setInterval /timer exch def} def
+/halt     {timer .clearTimeout /timer false def} def
+/callback {timer type (booleantype) eq {go} {halt} ifelse} def
+
+.gcanvas (onclick) /callback cvx .callback .hook
