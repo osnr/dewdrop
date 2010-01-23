@@ -4,7 +4,7 @@ function PdfT(V) {
 }
 
 function isPdfT(V) {
-  return V.constructor == PdfT; // TODO better test
+  return V && V.constructor == PdfT; // TODO better test
 }
 
 function ps0(L, F, S) {
@@ -75,7 +75,7 @@ function ps0(L, F, S) {
     return N ? (F ? parseFloat(L) : parseInt(L, 10)) : L;
   }
 
-  function proc() { // TODO supress evaluation???
+  function proc() {
     xchar();
     var L = [];
     while(peek()) {
@@ -182,13 +182,11 @@ function wps(E, T) {
     var N = S.pop();
     var X = [];
     var Y = [];
-    //alert("roll 1 " + N + " " + J + " " + S);
     for(var I = 0; I < N; I++)
       if(I < J) X.unshift(S.pop());
       else Y.unshift(S.pop());
     for(I = 0; I < J; I++) S.push(X.shift());
     for(I = 0; I < N - J; I++) S.push(Y.shift());
-    //alert("roll 2 " + N + " " + J + " " + S);
   };
 
   F["eq"] = function() {
@@ -261,46 +259,50 @@ function wps(E, T) {
   F["=="] = function() {alert(S[0]);};
   F["pstack"] = function() {alert(S);};
 
-   function run(C) {
-      if(!C.length) S.push(C);
-         else {
-            var M = C.length;
-            for(var I = 0; I < M; I++) {
-               var T = C[I];
-               if(typeof T == "number" || typeof T == "object" || quoted(T))
-                  S.push(T);
-               else {
-                  if(F[T]) F[T]();
-                  else throw "Unknown operator '" + T + "' " + typeof T;
-               }
-            }
-         }
-   }
+  function run(C) {
+    if(!C.length) S.push(C);
+    else {
+      var M = C.length;
+      for(var I = 0; I < M; I++) {
+        var T = C[I];
+        if(typeof T == "number" || typeof T == "object" || quoted(T))
+          S.push(T);
+        else {
+          if(F[T]) F[T]();
+          else throw "Unknown operator '" + T + "' " + typeof T;
+        }
+      }
+    }
+  }
 
-   F["def"] = function() {
-      var C = S.pop();
-      var N = S.pop();
-      if(quoted(N)) F[N.substring(1)] = function() {run(C);};
-      else throw "Wrong operator name " + N + " for " + C;
-   };
+  F["def"] = function() {
+    var C = S.pop();
+    var N = S.pop();
+    if(quoted(N)) F[N.substring(1)] = function() {run(C);};
+    else throw "Wrong operator name " + N + " for " + C;
+  };
 
   // js ffi operators
 
-  F["call"] = function() { // fn nargs -- ...
-    var A = S.pop();
+  F["call"] = function() { // dict key nargs -- ...
     var N = S.pop();
+    var K = S.pop();
+    var D = S.pop();
     var X = [];
-    for(var I = 0; I < A; I++) {
-      // TODO fix PdfT + quoted
+    for(var I = 0; I < N; I++) {
       var V = S.pop();
       X.unshift(isPdfT(V) ? V.V : (quoted(V) ? V.substring(1) : V));
     }
-    alert("call " + N + " " + A);
-    N.apply(this, X);
+    D[K.substring(1)].apply(D, X);
   };
 
   F["gc"] = function() { // -- gc
     S.push(C);
+  };
+
+  F["nativeString"] = function() { // any -- jsString
+    var V = S.pop();
+    S.push(isPdfT(V) ? V.V : (quoted(V) ? V.substring(1) : "" + V));
   };
 
   // html5 utility operators
