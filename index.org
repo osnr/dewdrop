@@ -432,7 +432,7 @@ The [[http://svn.ghostscript.com/viewvc/trunk/gs/examples/tiger.eps?view=co][ori
 #+end_html
 
 #+html: <div id="tiger" style="display:none">
-#+html: <!-- TODO insert tiger.eps automatically -->
+#+include "tiger.eps" src text
 #+html: </div>
 
 #+begin_html
@@ -465,6 +465,8 @@ Is this an interesting JavaScript and canvas benchmark?
 | Firefox 3.5 |         13.0 |                    9.5 |                 3.3 |
 | Safari      |          2.9 |                      0 |                   0 |
 
+The above times were on Vaio T7200 Core 2 2GHz 2GB running Ubuntu.
+
 [[http://www.feiri.de/pcan/][PostCanvas]] runs this [[http://www.feiri.de/pcan/example1.html][example]] about 1.5 times (Chrome) to 3 times
 (Firefox) faster.  I am actually surprised that WPS runs only about
 1.5 times slower in Chrome even though it interprets almost everything
@@ -494,6 +496,19 @@ already know this. For instance, when I run the Tiger demo it takes
 about 19sec on my machine (FF3.0, dual core, 4gb ram) but according to
 the firebug profiler it's making nearly 4 million function calls (as a
 comparison PostCanvas is *only* making about 220,000 calls).
+
+#+end_quote
+
+Note by Ray Johnson:
+
+#+begin_quote
+
+Tested Safari 4.0.4 (Win) and Firefox 3.5.5 (Win):
+
+- Safari 4.0.4 Tiger drawing time = 1.76
+- Firefox 3.5.5 Tiger drawing time = 6.945
+
+I’m on a Dell T7400 Xeon Quad Core 3.0 GHz with 4GB Ram and Vista SP2 32 Bit-and
 
 #+end_quote
 
@@ -911,15 +926,17 @@ I have tried the following browsers so far:
 |---+---------+---------------------------------+------------------------------------|
 | / |         | <                               |                                    |
 |   | Firefox | 3.0.11                          | no text drawing, linecap, linejoin |
-|   | Firefox | 3.5b4pre                        | ~ same as Firefox 3.0.11?          |
+|   |         | 3.5b4pre                        | ~ same as Firefox 3.0.11?          |
+|   |         | 3.5.5 Win                       | reported by Ray Johnson            |
 |   | Opera   | 10.00 Beta                      | no text drawing, ugly aliasing     |
 |   | Chrome  | 3.0.189.0                       | lines not joined properly          |
 |   | Safari  | for Mac Version 4.0.2 (5530.19) | reported by Will King              |
+|   |         | 4.0.4 Win                       | reported by Ray Johnson            |
 
 If you are using a different browser, please [[http://logand.com/contact.html][let me know]] if it works
 for you.
 
-* Limitations and Known Issues 
+* Limitations and Known Issues
 
 - many PostScript operators are still to be implemented
 - only small fraction of PDF operators has been implemented
