@@ -13,36 +13,45 @@ systemdict/]
 systemdict/}/] cvx/cvx cvx 2 array astore cvx put
 systemdict/def{currentdict 2 index 2 index put pop pop}put
 
-%% stack & dict
-
-/dup{0 index}def
-/cleartomark{array pop}def
-
-/known{exch begin where{currentdict eq}{false}if end}def
-/store{1 index where{3 1 roll put}{def}ifelse}def
-/load{dup where pop exch get}def
-
+/true .true def
+/false .false def
+/null .null def
 /maxlength 1000 def % TODO
 
-%% conditionals
+/.bdef{bind def}bind def
 
-/true/.true load def
-/false/.false load def
-/null/.null load def
+%/.bdef 0 index where pop exch get =
 
-/not{false true ifelse}def
-/.logand{{{true}{false}ifelse}{pop false}ifelse}def
-/and/.logand load def % TODO numeric and
-/.logor{{pop true}{{true}{false}ifelse}ifelse}def
-/or/.logor load def % TODO numeric or
+/.xdef{exch def}.bdef
+/dup{0 index}.bdef
+/load{dup where pop exch get}.bdef
+/.ldef{load def}.bdef
+/if{{}ifelse}.bdef
 
-/ne{eq not}def
-/ge{lt not}def
-/le{1 index 1 index eq 3 1 roll lt or}def
-/gt{le not}def
-/if{{}ifelse}def
+%/dup load =
+%/if load =
 
-/.repeat{1 1 4 2 roll for}def
+/cleartomark{array pop}.bdef
+/known{exch begin where{currentdict eq}{false}if end}.bdef
+/store{1 index where{3 1 roll put}{def}ifelse}.bdef
+/not{{false}{true}ifelse}.bdef
+/.logand{{{true}{false}ifelse}{pop false}ifelse}.bdef
+/and/.logand .ldef % TODO numeric and
+/.logor{{pop true}{{true}{false}ifelse}ifelse}.bdef
+/or/.logor .ldef % TODO numeric or
+/ne{eq not}.bdef
+/ge{lt not}.bdef
+/le{1 index 1 index eq 3 1 roll lt or}.bdef
+/gt{le not}.bdef
+
+%/and load =
+%false false and =
+%false true and =
+%true false and =
+%true true and =
+%pstack
+
+/.repeat{1 1 4 2 roll for}.bdef
 %//     var B = Os.pop();
 %//     var N = Os.pop();
 %//     if(1 < N) Es.push([true, N - 1, B, Xrepeat]);
@@ -61,201 +70,208 @@ systemdict/def{currentdict 2 index 2 index put pop pop}put
 % } def
 % /repeat { % n b
 %   2 dict begin
-%     /b exch def
-%     /n exch def
+%     /b .xdef
+%     /n .xdef
 %     0 n lt b if
 %     1 n lt {n 1 sub b repeat} if
 %   end
 % } def
-%/repeat{/pop cvx exch/exec cvx 3 array astore cvx 1 1 4 2 roll for}def
-%/loop{0 exch 0 exch 1 exch for}def % TODO
-%/exit{}def % TODO
+%/repeat{/pop cvx exch/exec cvx 3 array astore cvx 1 1 4 2 roll for}.bdef
+%/loop{0 exch 0 exch 1 exch for}.bdef % TODO
+%/exit{}.bdef % TODO
 
 %% math
 
-/neg{0 exch sub}def
-/add{neg sub}def
-/idiv{div floor}def
+/floor{.math(floor)1 .call}.bdef
 
-/abs{.math(abs)1 .call}def
-/.acos{.math(acos)1 .call}def
-/.asin{.math(asin)1 .call}def
-/atan{exch .math(atan)1 .call}def
-/.atan2{.math(atan2)2 .call}def
-/ceiling{.math(ceil)1 .call}def
-/cos{.math(cos)1 .call}def
-/.exp{.math(exp)1 .call}def
-/floor{.math(floor)1 .call}def
-/log{.math(log)1 .call}def
-/.max{.math(max)2 .call}def
-/.min{.math(min)2 .call}def
-/.pow{.math(pow)2 .call}def
-/.random{.math(random)0 .call}def
-/rand{.random}def % TODO follow spec
-/round{.math(round)1 .call}def
-/sin{.math(sin)1 .call}def
-/sqrt{.math(sqrt)1 .call}def
-/.tan{.math(tan)1 .call}def
-/truncate{.math(truncate)1 .call}def % TODO Math.truncate does not exist!
+/neg{0 exch sub}.bdef
+/add{neg sub}.bdef
+/idiv{div floor}.bdef
 
-/.e{.math(E)get}def
-/.ln2{.math(LN2)get}def
-/.ln10{.math(LN10)get}def
-/.log2e{.math(LOG2E)get}def
-/.log10e{.math(LOG10E)get}def
-/.pi{.math(PI)get}def
-/.sqrt1_2{.math(SQRT1_2)get}def
-/.sqrt2{.math(SQRT2)get}def
+/abs{.math(abs)1 .call}.bdef
+/.acos{.math(acos)1 .call}.bdef
+/.asin{.math(asin)1 .call}.bdef
+/atan{exch .math(atan)1 .call}.bdef
+/.atan2{.math(atan2)2 .call}.bdef
+/ceiling{.math(ceil)1 .call}.bdef
+/cos{.math(cos)1 .call}.bdef
+/.exp{.math(exp)1 .call}.bdef
+/log{.math(log)1 .call}.bdef
+/.max{.math(max)2 .call}.bdef
+/.min{.math(min)2 .call}.bdef
+/.pow{.math(pow)2 .call}.bdef
+/.random{.math(random)0 .call}.bdef
+/rand{.random}.bdef % TODO follow spec
+/round{.math(round)1 .call}.bdef
+/sin{.math(sin)1 .call}.bdef
+/sqrt{.math(sqrt)1 .call}.bdef
+/.tan{.math(tan)1 .call}.bdef
+/truncate{.math(truncate)1 .call}.bdef % TODO Math.truncate does not exist!
+
+/.e{.math(E)get}.bdef
+/.ln2{.math(LN2)get}.bdef
+/.ln10{.math(LN10)get}.bdef
+/.log2e{.math(LOG2E)get}.bdef
+/.log10e{.math(LOG10E)get}.bdef
+/.pi{.math(PI)get}.bdef
+/.sqrt1_2{.math(SQRT1_2)get}.bdef
+/.sqrt2{.math(SQRT2)get}.bdef
 
 %% html
 
-/.setTimeout{.window(setTimeout)2 .call}def % cb ms -- id
-/.clearTimeout{.window(clearTimeout)1 .call pop}def % id --
-/.setInterval{.window(setInterval)2 .call}def % cb ms -- id
-/.clearInterval{.window(clearInterval)1 .call pop}def % id --
-/.document{.window(document)get}def % -- document
-/.getElementById{.document(getElementById)1 .call}def % id -- w
+/.setTimeout{.window(setTimeout)2 .call}.bdef % cb ms -- id
+/.clearTimeout{.window(clearTimeout)1 .call pop}.bdef % id --
+/.setInterval{.window(setInterval)2 .call}.bdef % cb ms -- id
+/.clearInterval{.window(clearInterval)1 .call pop}.bdef % id --
+/.document{.window(document)get}.bdef % -- document
+/.getElementById{.document(getElementById)1 .call}.bdef % id -- w
 
-%/.attachEvent{3 2 roll(attachEvent)2 .call pop}def % e k fn --
-%/.setAttribute{3 2 roll(setAttribute)2 .call pop}def % e k v --
-/.hook{put}def % e k cb --
+%/.attachEvent{3 2 roll(attachEvent)2 .call pop}.bdef % e k fn --
+%/.setAttribute{3 2 roll(setAttribute)2 .call pop}.bdef % e k v --
+/.hook{put}.bdef % e k cb --
 %if( td.attachEvent ) td.attachEvent('onclick', 'alert("blabla")');
 % else td.setAttribute('onclick', 'alert("blabla")');
 
 %% html5
 
-/.gget{.gc exch get}def
-/.gput{.gc 3 1 roll exch put}def
-/.gcall0{.gc 3 1 roll .call pop}def
-/.gcall1{.gc 3 1 roll .call}def
-/.gcanvas{(canvas).gget}def
-/.gdim{.gcanvas exch(height)exch put .gcanvas exch(width)exch put}def
-/.gbox{.gdim pop pop} def % TODO compute properly
+/.gget{.gc exch get}.bdef
+/.gput{.gc 3 1 roll exch put}.bdef
+/.gcall0{.gc 3 1 roll .call pop}.bdef
+/.gcall1{.gc 3 1 roll .call}.bdef
+/.gcanvas{(canvas).gget}.bdef
+/.gdim{.gcanvas exch(height)exch put .gcanvas exch(width)exch put}.bdef
+/.gbox{.gdim pop pop}.bdef % TODO compute properly
 
 %% canvas
 
-/.save{(save)0 .gcall0}def
-/.restore{(restore)0 .gcall0}def
-/.scale{(scale)2 .gcall0}def
-/.rotate{(rotate)1 .gcall0}def
-/.translate{(translate)2 .gcall0}def
-/.transform{(transform)6 .gcall0}def
-/.setTransform{(setTransform)6 .gcall0}def
-/.createLinearGradient{(createLinearGradient)4 .gcall1}def
-/.createRadialGradient{(createRadialGradient)6 .gcall1}def
-/.createPattern{(createPattern)2 .gcall1}def
-/.clearRect{(clearRect)4 .gcall0}def
-/.fillRect{(fillRect)4 .gcall0}def
-/.strokeRect{(strokeRect)4 .gcall0}def
-/.beginPath{(beginPath)0 .gcall0}def
-/.closePath{(closePath)0 .gcall0}def
-/.moveTo{(moveTo)2 .gcall0}def
-/.lineTo{(lineTo)2 .gcall0}def
-/.quadraticCurveTo{(quadraticCurveTo)4 .gcall0}def
-/.bezierCurveTo{(bezierCurveTo)6 .gcall0}def
-/.arcTo{(arcTo)5 .gcall0}def
-/.rect{(rect)4 .gcall0}def
-/.arc{(arc)6 .gcall0}def
-/.fill{(fill)0 .gcall0}def
-/.stroke{(stroke)0 .gcall0}def
-/.clip{(clip)0 .gcall0}def
-/.isPointInPath{(isPointInPath)2 .gcall1}def
-/.fillText{(fillText)4 .gcall0}def
-/.fillText{}def % TODO not working in Firefox
-/.strokeText{(strokeText)4 .gcall0}def
-/.strokeText{}def % TODO not working in Firefox
-/.measureText{(measureText)1 .gcall1}def
-/.drawImage1{(drawImage1)5 .gcall0}def
-/.drawImage2{(drawImage2)9 .gcall0}def
-/.createImageData1{(createImageData1)1 .gcall1}def
-/.createImageData2{(createImageData2)2 .gcall1}def
-/.getImageData{(getImageData)4 .gcall1}def
-/.putImageData{(putImageData)7 .gcall0}def
+/.save{(save)0 .gcall0}.bdef
+/.restore{(restore)0 .gcall0}.bdef
+/.scale{(scale)2 .gcall0}.bdef
+/.rotate{(rotate)1 .gcall0}.bdef
+/.translate{(translate)2 .gcall0}.bdef
+/.transform{(transform)6 .gcall0}.bdef
+/.setTransform{(setTransform)6 .gcall0}.bdef
+/.createLinearGradient{(createLinearGradient)4 .gcall1}.bdef
+/.createRadialGradient{(createRadialGradient)6 .gcall1}.bdef
+/.createPattern{(createPattern)2 .gcall1}.bdef
+/.clearRect{(clearRect)4 .gcall0}.bdef
+/.fillRect{(fillRect)4 .gcall0}.bdef
+/.strokeRect{(strokeRect)4 .gcall0}.bdef
+/.beginPath{(beginPath)0 .gcall0}.bdef
+/.closePath{(closePath)0 .gcall0}.bdef
+/.moveTo{(moveTo)2 .gcall0}.bdef
+/.lineTo{(lineTo)2 .gcall0}.bdef
+/.quadraticCurveTo{(quadraticCurveTo)4 .gcall0}.bdef
+/.bezierCurveTo{(bezierCurveTo)6 .gcall0}.bdef
+/.arcTo{(arcTo)5 .gcall0}.bdef
+/.rect{(rect)4 .gcall0}.bdef
+/.arc{(arc)6 .gcall0}.bdef
+/.fill{(fill)0 .gcall0}.bdef
+/.stroke{(stroke)0 .gcall0}.bdef
+/.clip{(clip)0 .gcall0}.bdef
+/.isPointInPath{(isPointInPath)2 .gcall1}.bdef
+/.fillText{(fillText)4 .gcall0}.bdef
+/.fillText{}.bdef % TODO not working in Firefox
+/.strokeText{(strokeText)4 .gcall0}.bdef
+/.strokeText{}.bdef % TODO not working in Firefox
+/.measureText{(measureText)1 .gcall1}.bdef
+/.drawImage1{(drawImage1)5 .gcall0}.bdef
+/.drawImage2{(drawImage2)9 .gcall0}.bdef
+/.createImageData1{(createImageData1)1 .gcall1}.bdef
+/.createImageData2{(createImageData2)2 .gcall1}.bdef
+/.getImageData{(getImageData)4 .gcall1}.bdef
+/.putImageData{(putImageData)7 .gcall0}.bdef
 
-/.getGlobalAlpha{(globalAlpha).gget}def
-/.getGlobalCompositeOperation{(globalCompositeOperation).gget}def
-/.getStrokeStyle{(strokeStyle).gget}def
-/.getFillStyle{(fillStyle).gget}def
-/.getLineWidth{(lineWidth).gget}def
-/.getLineCap{(lineCap).gget}def
-/.getLineJoin{(lineJoin).gget}def
-/.getMiterLimit{(miterLimit).gget}def
-/.getShadowOffsetX{(shadowOffsetX).gget}def
-/.getShadowOffsetY{(shadowOffsetY).gget}def
-/.getShadowBlur{(shadowBlur).gget}def
-/.getShadowColor{(shadowColor).gget}def
-/.getFont{(font).gget}def
-/.getTextAlign{(textAlign).gget}def
-/.getTextBaseline{(textBaseline).gget}def
+/.getGlobalAlpha{(globalAlpha).gget}.bdef
+/.getGlobalCompositeOperation{(globalCompositeOperation).gget}.bdef
+/.getStrokeStyle{(strokeStyle).gget}.bdef
+/.getFillStyle{(fillStyle).gget}.bdef
+/.getLineWidth{(lineWidth).gget}.bdef
+/.getLineCap{(lineCap).gget}.bdef
+/.getLineJoin{(lineJoin).gget}.bdef
+/.getMiterLimit{(miterLimit).gget}.bdef
+/.getShadowOffsetX{(shadowOffsetX).gget}.bdef
+/.getShadowOffsetY{(shadowOffsetY).gget}.bdef
+/.getShadowBlur{(shadowBlur).gget}.bdef
+/.getShadowColor{(shadowColor).gget}.bdef
+/.getFont{(font).gget}.bdef
+/.getTextAlign{(textAlign).gget}.bdef
+/.getTextBaseline{(textBaseline).gget}.bdef
 
-/.setGlobalAlpha{(globalAlpha).gput}def
-/.setGlobalCompositeOperation{(globalCompositeOperation).gput}def
-/.setStrokeStyle{(strokeStyle).gput}def
-/.setFillStyle{(fillStyle).gput}def
-/.setLineWidth{(lineWidth).gput}def
-/.setLineCap{(lineCap).gput}def
-/.setLineJoin{(lineJoin).gput}def
-/.setLineCap{pop}def % TODO remove this later (Firefox throws)
-/.setLineJoin{pop}def % TODO remove this later (Firefox throws)
-/.setMiterLimit{(miterLimit).gput}def
-/.setShadowOffsetX{(shadowOffsetX).gput}def
-/.setShadowOffsetY{(shadowOffsetY).gput}def
-/.setShadowBlur{(shadowBlur).gput}def
-/.setShadowColor{(shadowColor).gput}def
-/.setFont{(font).gput}def
-/.setTextAlign{(textAlign).gput}def
-/.setTextBaseline{(textBaseline).gput}def
+/.setGlobalAlpha{(globalAlpha).gput}.bdef
+/.setGlobalCompositeOperation{(globalCompositeOperation).gput}.bdef
+/.setStrokeStyle{(strokeStyle).gput}.bdef
+/.setFillStyle{(fillStyle).gput}.bdef
+/.setLineWidth{(lineWidth).gput}.bdef
+/.setLineCap{(lineCap).gput}.bdef
+/.setLineJoin{(lineJoin).gput}.bdef
+/.setLineCap{pop}.bdef % TODO remove this later (Firefox throws)
+/.setLineJoin{pop}.bdef % TODO remove this later (Firefox throws)
+/.setMiterLimit{(miterLimit).gput}.bdef
+/.setShadowOffsetX{(shadowOffsetX).gput}.bdef
+/.setShadowOffsetY{(shadowOffsetY).gput}.bdef
+/.setShadowBlur{(shadowBlur).gput}.bdef
+/.setShadowColor{(shadowColor).gput}.bdef
+/.setFont{(font).gput}.bdef
+/.setTextAlign{(textAlign).gput}.bdef
+/.setTextBaseline{(textBaseline).gput}.bdef
 
 %% PostScript
 
-/.deg2rad{.pi 180 div mul}def
-/.rad2deg{180 .pi div mul}def
-
-/identmatrix{pop [1 0 0 1 0 0]}def % TODO fill
-/matrix{6 array identmatrix}def
+/.deg2rad{.pi 180 div mul}.bdef
+/.rad2deg{180 .pi div mul}.bdef
 
 /.cx 0 def
 /.cy 0 def
 /.px 0 def
 /.py 0 def
-/.tm matrix def
-/.tmd matrix def
+/.setPoint{/.cy .xdef/.cx .xdef}.bdef
+/.setPath{/.py .xdef/.px .xdef}.bdef
+/currentpoint{/.cx load /.cy load}.bdef
+/.getPath{/.px load /.py load}.bdef
 
-/.setPoint{/.cy exch def/.cx exch def}def
-/.setPath{/.py exch def/.px exch def}def
+/identmatrix{pop [1 0 0 1 0 0]}.bdef % TODO fill
+/matrix{6 array identmatrix}.bdef
+/setmatrix{/.tm .xdef}.bdef
+/defaultmatrix{pop matrix}.bdef % TODO fill
+/initmatrix{matrix defaultmatrix setmatrix}.bdef
+/currentmatrix{pop /.tm load}.bdef % TODO fill
+initmatrix
+
+%/matrix load =
+%matrix =
+
+/.getTmd{/.tmd load}.bdef
+/.setTmd{/.tmd .xdef}.bdef
+/.resetTmd{matrix .setTmd}.bdef
+.resetTmd
 
 /.update{ % m --
-  dup .cx exch .cy exch % m .cx .cy m
+  %dup .cx exch .cy exch % m .cx .cy m
+  currentpoint 2 index % m .cx .cy m
   .xy .setPoint % m
-  dup .tmd exch .mmul/.tmd exch def % (.tmd x m)
-  .tm exch .mmul setmatrix % = .tm x m
-} def
+  dup .getTmd exch .mmul .setTmd % (.tmd x m)
+  dup currentmatrix exch .mmul setmatrix % = .tm x m
+}.bdef
 
-/transform{dup type(arraytype)ne{.tmd}if .xy}def % TODO why .tmd not .tm?
-/itransform{dup type(arraytype)ne{.tmd}if .minv .xy}def % TODO why .tmd not .tm?
+/transform{dup type(arraytype)ne{.getTmd}if .xy}.bdef % TODO why .tmd not .tm?
+/itransform{dup type(arraytype)ne{.getTmd}if .minv .xy}.bdef % TODO why .tmd not .tm?
 
-/.scaleM{0 0 3 2 roll 0 0 6 array astore}def % x y -- [x 0 0 y 0 0]
-/.scale3{pop .scaleM}def
-/.scale2{2 copy .scaleM .update .scale}def
-/scale{dup type(arraytype)eq{.scale3}{.scale2}ifelse}def
+/.scaleM{0 0 3 2 roll 0 0 6 array astore}.bdef % x y -- [x 0 0 y 0 0]
+/.scale3{pop .scaleM}.bdef
+/.scale2{2 copy .scaleM .update .scale}.bdef
+/scale{dup type(arraytype)eq{.scale3}{.scale2}ifelse}.bdef
 
-/.translateM{1 0 0 1 6 4 roll 6 array astore}def % x y -- [1 0 0 1 x y]
-/.translate3{pop .translateM}def
-/.translate2{2 copy .translateM .update .translate}def
-/translate{dup type(arraytype)eq{.translate3}{.translate2}ifelse}def
+/.translateM{1 0 0 1 6 4 roll 6 array astore}.bdef % x y -- [1 0 0 1 x y]
+/.translate3{pop .translateM}.bdef
+/.translate2{2 copy .translateM .update .translate}.bdef
+/translate{dup type(arraytype)eq{.translate3}{.translate2}ifelse}.bdef
 
-/.rotateM{dup cos exch sin dup neg 2 index 0 0 6 array astore}def % a -- [c s -s c 0 0]
-/.rotate2{pop .deg2rad .rotateM}def
-/.rotate1{.deg2rad dup .rotateM .update .rotate}def
-/rotate{dup type(arraytype)eq{.rotate2}{.rotate1}ifelse}def
+/.rotateM{dup cos exch sin dup neg 2 index 0 0 6 array astore}.bdef % a -- [c s -s c 0 0]
+/.rotate2{pop .deg2rad .rotateM}.bdef
+/.rotate1{.deg2rad dup .rotateM .update .rotate}.bdef
+/rotate{dup type(arraytype)eq{.rotate2}{.rotate1}ifelse}.bdef
 
-/currentpoint{.cx .cy}def
-
-/setmatrix{/.tm exch def}def
-
-%– initmatrix – 	Set CTM to device default
-%matrix defaultmatrix matrix 	Fill matrix with device default matrix
-%matrix currentmatrix matrix 	Fill matrix with CTM
 
 %matrix concat – 	Replace CTM by matrix ´ CTM
 %matrix1 matrix2 matrix3 concatmatrix matrix3 	Fill matrix3 with matrix1 ´ matrix2
@@ -268,128 +284,131 @@ systemdict/def{currentdict 2 index 2 index put pop pop}put
 
 %matrix1 matrix2 invertmatrix matrix2 	Fill matrix2 with inverse of matrix1
 
-/gsave{.save}def
-/grestore{.restore}def
-/rectclip{.clipRect}def
-/rectfill{.fillRect}def
-/rectstroke{.strokeRect}def
-/newpath{.beginPath}def
-/closepath{.closePath}def
-/moveto{2 copy .setPoint 2 copy .setPath/.tmd matrix def .moveTo}def
-/lineto{2 copy .setPoint 2 copy .setPath/.tmd matrix def .lineTo}def
-/arcto{.arcTo}def
+/gsave{.save}.bdef
+/grestore{.restore}.bdef
+/clip{.clip}.bdef
+/rectclip{.clearRect}.bdef
+/rectfill{.fillRect}.bdef
+/rectstroke{.strokeRect}.bdef
+/newpath{.beginPath}.bdef
+/closepath{.closePath}.bdef
+/moveto{2 copy .setPoint 2 copy .setPath .resetTmd .moveTo}.bdef
+/lineto{2 copy .setPoint 2 copy .setPath .resetTmd .lineTo}.bdef
+/arcto{.arcTo}.bdef
 
-/setlinewidth{.setLineWidth}def
-/setlinecap{.setLineCap}def % TODO
-/setlinejoin{.setLineJoin}def % TODO
-/setmiterlimit{.setMiterLimit}def
+/setlinewidth{.setLineWidth}.bdef
+/setlinecap{.setLineCap}.bdef % TODO
+/setlinejoin{.setLineJoin}.bdef % TODO
+/setmiterlimit{.setMiterLimit}.bdef
 
-/currentlinewidth{.getLineWidth}def
-/currentlinecap{<</butt 0/round 1/square 2>> .getLineCap get}def
-/currentlinejoin{<</miter 0/round 1/bevel 2>> .getLineJoin get}def
-/currentmiterlimit{.getMiterLimit}def
+/currentlinewidth{.getLineWidth}.bdef
+/currentlinecap{<</butt 0/round 1/square 2>> .getLineCap get}.bdef
+/currentlinejoin{<</miter 0/round 1/bevel 2>> .getLineJoin get}.bdef
+/currentmiterlimit{.getMiterLimit}.bdef
 
-/setgray{255 mul dup dup .rgb dup .setStrokeStyle .setFillStyle}def
-/setrgbcolor{3{255 mul round 3 1 roll}repeat .rgb dup .setStrokeStyle .setFillStyle}def
-/setfont{} def % TODO C.font = N + "pt " + F.V;
-/clippath{0 0 .gcanvas(width)get .gcanvas(height)get .rect}def % TODO
-/show{currentpoint 3 2 roll 3 copy .fillText .strokeText}def % TODO
+/setgray{255 mul dup dup .rgb dup .setStrokeStyle .setFillStyle}.bdef
+/setrgbcolor{3{255 mul round 3 1 roll}repeat .rgb dup .setStrokeStyle .setFillStyle}.bdef
+/setfont{}.bdef % TODO C.font = N + "pt " + F.V;
+/clippath{0 0 .gcanvas(width)get .gcanvas(height)get .rect}.bdef % TODO
+/show{currentpoint 3 2 roll 3 copy .fillText .strokeText}.bdef % TODO
 
-/rlineto{.tmd .xy .py add exch .px add exch .tmd .minv .xy lineto}def
+%/rlineto{.getTmd .xy .py add exch .px add exch .getTmd .minv .xy lineto}.bdef
+/rlineto{.getTmd .xy /.py load add exch /.px load add exch .getTmd .minv .xy lineto}.bdef
+/curveto{2 copy .setPoint 2 copy .setPath .resetTmd .bezierCurveTo}.bdef
 
-/currentflat{42}def % TODO
-/setflat{pop}def % TODO
+/currentflat{42}.bdef % TODO
+/setflat{pop}.bdef % TODO
 
-/showpage{}def % TODO
+/showpage{}.bdef % TODO
 
-/arc{.deg2rad exch .deg2rad exch true .arc}def % TODO currentpoint
-/arcn{.deg2rad exch .deg2rad exch false .arc}def % TODO currentpoint
+/arc{.deg2rad exch .deg2rad exch true .arc}.bdef % TODO currentpoint
+/arcn{.deg2rad exch .deg2rad exch false .arc}.bdef % TODO currentpoint
 
-/fill{.fill newpath currentpoint .moveTo}def % TODO
+/fill{.fill newpath currentpoint .moveTo}.bdef % TODO
 
-/setdash{pop pop}def % TODO
+/setdash{pop pop}.bdef % TODO
 
-/stroke{.stroke newpath currentpoint .moveTo}def
+/stroke{.stroke newpath currentpoint .moveTo}.bdef
 
-/curveto{2 copy .setPoint 2 copy .setPath/.tmd matrix def .bezierCurveTo}def
-
-/grestoreall{}def % TODO
+/grestoreall{}.bdef % TODO
 
 %% PDF
 
-/w{setlinewidth}def
-/J{setlinecap}def % TODO
-/j{setlinejoin}def % TODO
-/M{setmitterlimit}def
-/d{setdash}def % TODO
-/ri{}def % TODO
-/i{}def % TODO
-/gs{}def % TODO
-/q{gsave}def
-/Q{grestore}def
-/cm{.transform}def
-/m{newpath moveto}def % TODO only if not m previously
-/l{lineto}def
-/c{.bezierCurveTo}def
-/v{currentpoint cp2 p3 c}def % TODO fix arg order
-/y{cp1 p3 p3 c}def % TODO fix arg order
-/h{closepath}def % TODO
-/re{.rect}def % TODO really, or x y m , x+w y l , x+w y+h l , x y+h l , h
-/S{stroke}def
-/s{h S}def
-/f{fill}def % TODO
-/F{f}def
-/f*{}def % TODO
-/B{f S}def
-/B*{f* S}def
-/b{h B}def
-/b*{h B*}def
-/n{}def % TODO
-/W{clip}def % TODO
-/W*{clip}def % TODO
-/BT{}def % TODO
-/ET{}def % TODO
-/Tc{}def % TODO
-/Tw{}def % TODO
-/Tz{}def % TODO
-/TL{}def % TODO
-/Tf{setfont}def % TODO
-/Tr{}def % TODO
-/Ts{}def % TODO
-/Td{translate 0 0 moveto}def
-/TD{}def % TODO
-/Tm{}def % TODO
-/T*{}def % TODO
-/Tj{show}def % TODO
-/TJ{}def % TODO
-/'{}def % TODO
-/"{}def % TODO
-/d0{}def % TODO
-/d1{}def % TODO
-/CS{}def % TODO
-/cs{}def % TODO
-%/SC/setcolor load def
-/SCN{}def % TODO
-%/sc/setcolor load def
-/scn{}def % TODO
-/G{}def % TODO
-/g{}def % TODO
-/RG{}def % TODO
-/rg{setrgbcolor}def % TODO
-/K{}def % TODO
-/k{}def % TODO
-/sh{}def % TODO
-/BI{}def % TODO
-/ID{}def % TODO
-/EI{}def % TODO
-/Do{}def % TODO
-/MP{}def % TODO
-/DP{}def % TODO
-/BMC{}def % TODO
-/BDC{}def % TODO
-/EMC{}def % TODO
-/BX{}def % TODO
-/EX{}def % TODO
+/w{setlinewidth}.bdef
+/J{setlinecap}.bdef % TODO
+/j{setlinejoin}.bdef % TODO
+/M{setmiterlimit}.bdef
+/d{setdash}.bdef % TODO
+/ri{}.bdef % TODO
+/i{}.bdef % TODO
+/gs{}.bdef % TODO
+/q{gsave}.bdef
+/Q{grestore}.bdef
+/cm{.transform}.bdef
+/m{newpath moveto}.bdef % TODO only if not m previously
+/l{lineto}.bdef
+/c{.bezierCurveTo}.bdef
+%/v{currentpoint cp2 p3 c}.bdef % TODO fix arg order
+/v{}.bdef % TODO fix arg order
+%/y{cp1 p3 p3 c}.bdef % TODO fix arg order
+/y{}.bdef % TODO fix arg order
+/h{closepath}.bdef % TODO
+/re{.rect}.bdef % TODO really, or x y m , x+w y l , x+w y+h l , x y+h l , h
+/S{stroke}.bdef
+/s{h S}.bdef
+/f{fill}.bdef % TODO
+/F{f}.bdef
+/f*{}.bdef % TODO
+/B{f S}.bdef
+/B*{f* S}.bdef
+/b{h B}.bdef
+/b*{h B*}.bdef
+/n{}.bdef % TODO
+/W{clip}.bdef % TODO
+/W*{clip}.bdef % TODO
+/BT{}.bdef % TODO
+/ET{}.bdef % TODO
+/Tc{}.bdef % TODO
+/Tw{}.bdef % TODO
+/Tz{}.bdef % TODO
+/TL{}.bdef % TODO
+/Tf{setfont}.bdef % TODO
+/Tr{}.bdef % TODO
+/Ts{}.bdef % TODO
+/Td{translate 0 0 moveto}.bdef
+/TD{}.bdef % TODO
+/Tm{}.bdef % TODO
+/T*{}.bdef % TODO
+/Tj{show}.bdef % TODO
+/TJ{}.bdef % TODO
+/'{}.bdef % TODO
+/"{}.bdef % TODO
+/d0{}.bdef % TODO
+/d1{}.bdef % TODO
+/CS{}.bdef % TODO
+/cs{}.bdef % TODO
+%/SC/setcolor .ldef
+/SCN{}.bdef % TODO
+%/sc/setcolor .ldef
+/scn{}.bdef % TODO
+/G{}.bdef % TODO
+/g{}.bdef % TODO
+/RG{}.bdef % TODO
+/rg{setrgbcolor}.bdef % TODO
+/K{}.bdef % TODO
+/k{}.bdef % TODO
+/sh{}.bdef % TODO
+/BI{}.bdef % TODO
+/ID{}.bdef % TODO
+/EI{}.bdef % TODO
+/Do{}.bdef % TODO
+/MP{}.bdef % TODO
+/DP{}.bdef % TODO
+/BMC{}.bdef % TODO
+/BDC{}.bdef % TODO
+/EMC{}.bdef % TODO
+/BX{}.bdef % TODO
+/EX{}.bdef % TODO
 
 % /Operators 50 dict begin
 %   /cs { //ResolveColorSpace exec //SetColorSpaceSafe exec
@@ -471,6 +490,8 @@ systemdict/def{currentdict 2 index 2 index put pop pop}put
 % currentdict end def
 
 %% finish
+
+false .strictBind
 
 /userdict 1000 dict def
 userdict begin

@@ -139,21 +139,27 @@ function ps0(L, Os, Ds, Es) { // TODO Nd name dict name=>sym?
     }
   }
 
-  function Xexec() {Es.push([false, Os.pop()]);};
+  //function Xexec() {Es.push([false, Os.pop()]);};
 
   function run(X, Z) {
     if(isSymbol(X) && !isQuoted(X)) { // executable name
       var K = symbolName(X);
       var D = inDs(Ds, K);
-      var V = D && D[K];
-      if(V !== undefined) Es.push([false, V]);
-      else throw "Unknown operator '" + K + "' " + V;
+      if(!D) {
+        throw "bind error '" + K + "'";
+      }
+      Es.push([false, D[K]]);
+      //if(V !== undefined) Es.push([false, V, Xexec]);
+      //else throw "Unknown operator '" + K + "' " + V;
     } else if(Z && isArray(X) && isQuoted(X)) { // proc from Es
       if(0 < X.length) {
         var F = X[0];
         var R = quote(X.slice(1));
-        if(0 < R.length) Es.push([false, R, Xexec]);
+        //if(0 < R.length) Es.push([false, R, Xexec]);
+        if(0 < R.length) Es.push([false, R]);
+        //run(F, true);
         run(F, false);
+        //Es.push([false, F]);
       }
     } else if("function" == typeof X) X(); // operator
     else Os.push(X);
@@ -287,14 +293,15 @@ function wps(E, T) {
   Sd["eq"] = function() {var Y = Os.pop(); var X = Os.pop(); Os.push(X == Y);};
   Sd["lt"] = function() {var Y = Os.pop(); var X = Os.pop(); Os.push(X < Y);};
 
-  function Xexec() {Es.push([false, Os.pop()]);};
+  //function Xexec() {Es.push([false, Os.pop()]);};
+  //Sd["exec"] = Xexec;
+  Sd["exec"] = function() {Es.push([false, Os.pop()]);};
 
-  Sd["exec"] = Xexec;
   Sd["ifelse"] = function() {
     var N = Os.pop();
     var P = Os.pop();
     var C = Os.pop();
-    Es.push([false, C === true ? P : N, Xexec]);
+    Es.push([false, C === true ? P : N]);
   };
   Sd["for"] = function Xfor() { // TODO in ps
     var B = Os.pop();
@@ -303,17 +310,17 @@ function wps(E, T) {
     var J = Os.pop();
     if(K < 0) {
       if(L <= J + K) Es.push([true, J + K, K, L, B, Xfor]);
-      if(L <= J) Es.push([false, J, B, Xexec]);
+      if(L <= J) Es.push([false, J, B]);
     } else {
       if(J + K <= L) Es.push([true, J + K, K, L, B, Xfor]);
-      if(J <= L) Es.push([false, J, B, Xexec]);
+      if(J <= L) Es.push([false, J, B]);
     }
   };
   Sd["repeat"] = function Xrepeat() { // TODO in ps
     var B = Os.pop();
     var N = Os.pop();
     if(1 < N) Es.push([true, N - 1, B, Xrepeat]);
-    if(0 < N) Es.push([false, B, Xexec]);
+    if(0 < N) Es.push([false, B]);
   };
 
   Sd["="] = function() {var X = Os.pop(); alert(X && X.nm || X);};
@@ -373,8 +380,59 @@ function wps(E, T) {
 
   Sd["restore"] = function() {Os.pop();}; // TODO
   Sd["save"] = function() {Os.push([]);}; // TODO
-  Sd["bind"] = function() {}; // TODO
 
+  var Sb = true;
+  Sd[".strictBind"] = function() {Sb = true === Os.pop();}; // bool --
+  Sd["bind"] = function() {Os.push(bind(Os.pop()));};
+  function bind(X) {
+    if(isSymbol(X) && !isQuoted(X)) {
+      var K = symbolName(X);
+      var D = inDs(Ds, K);
+      if(Sb) {
+        if(!D)
+          throw "bind error '" + K + "'";
+        return bind(D[K]);
+      } else return !D ? X : bind(D[K]);
+    } else if(isArray(X) && isQuoted(X)) {
+      var N = X.length;
+      var A = [];
+      for(var I = 0; I < N; I++) {
+        var Xi = X[I];
+        var Xb = bind(Xi);
+        if(isArray(Xi))
+          A = A.concat(isQuoted(Xi) ? quote([Xb]) : [Xb]);
+        else
+          A = A.concat(Xb);
+      }
+      return quote(A);
+    }
+    return X;
+  }
+
+//   function bind(X) {
+//     if(isSymbol(X) && !isQuoted(X)) {
+//       var K = symbolName(X);
+//       var D = inDs(Ds, K);
+//       return !D ? X : bind(D[K]); // TODO .strictBind ???
+// //       if(!D) {
+// //         throw "bind error '" + K + "'";
+// //       }
+// //       return bind(D[K]);
+//     } else if(isArray(X) && isQuoted(X)) {
+//       var N = X.length;
+//       var A = [];
+//       for(var I = 0; I < N; I++) {
+//         var Xi = X[I];
+//         var Xb = bind(Xi);
+//         if(isArray(Xi))
+//           A = A.concat(isQuoted(Xi) ? quote([Xb]) : [Xb]);
+//         else
+//           A = A.concat(Xb);
+//       }
+//       return quote(A);
+//     }
+//     return X;
+//   }
   //////////////////////////////////////////////////////////
 
   // js ffi operators
@@ -401,22 +459,28 @@ function wps(E, T) {
   };
   Sd[".callback"] = function() { // body -- callback // TODO refactor properly
     var X = Os.pop();
-    Os.push(function() {
+    Os.push(function() { // TODO fix this mess
               //alert(".callback");
               //Es.push([false, X]); // TODO process event in ps0 ???
   function run(X, Z) {
     if(isSymbol(X) && !isQuoted(X)) { // executable name
       var K = symbolName(X);
       var D = inDs(Ds, K);
-      var V = D && D[K];
-      if(V !== undefined) Es.push([false, V]);
-      else throw "Unknown operator '" + K + "' " + V;
+      if(!D) {
+        throw "bind error '" + K + "'";
+      }
+      Es.push([false, D[K]]);
+      //if(V !== undefined) Es.push([false, V, Xexec]);
+      //else throw "Unknown operator '" + K + "' " + V;
     } else if(Z && isArray(X) && isQuoted(X)) { // proc from Es
       if(0 < X.length) {
         var F = X[0];
         var R = quote(X.slice(1));
-        if(0 < R.length) Es.push([false, R, Xexec]);
+        //if(0 < R.length) Es.push([false, R, Xexec]);
+        if(0 < R.length) Es.push([false, R]);
+        //run(F, true);
         run(F, false);
+        //Es.push([false, F]);
       }
     } else if("function" == typeof X) X(); // operator
     else Os.push(X);
