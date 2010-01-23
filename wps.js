@@ -102,12 +102,13 @@ function PsParser() {
   function symbol() {
     // TODO 1e10 1E-5 real numbers
     // TODO radix numbers 8#1777 16#FFFE 2#1000
+    // TODO if preceeded with / then cannot be number
     var C = xchar();
-    if(member(C, "()<>% \t\n")) throw "Symbol expected, got " + C;
+    if(member(C, "()<>/% \t\n")) throw "Symbol expected, got " + C;
     var N = member(C, "+-0123456789.");
     var F = "." == C;
     var L = [C];
-    while(peek() && !member(peek(), "()<>[]{}% \t\n")) {
+    while(peek() && !member(peek(), "()<>[]{}/% \t\n")) {
       C = xchar();
       L.push(C);
       if(N && !member(C, "0123456789")) {
