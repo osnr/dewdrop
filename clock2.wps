@@ -28,17 +28,18 @@
 /hand { % segment angle color width --
   origin moveto
   width mul setlinewidth
-  cvx exec
+%  cvx exec
+  load exec
   2 copy   cos mul
   3 1 roll sin mul
   lineto stroke
 } bind def
 
 /draw {
-  gsave
   /$h .date (getHours)   0 .call def
   /$m .date (getMinutes) 0 .call def
   /$s .date (getSeconds) 0 .call def
+  gsave
   width setlinewidth
   black clippath fill % background
   center dup translate
