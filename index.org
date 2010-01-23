@@ -100,9 +100,9 @@ A few initial ideas and questions:
     client and server side.
 - Can PDF documents be displayed in web browsers without server-side
   image rendering?
-  - Implement a canvas based version of PDF page contents in [[http://ondoc.logand.com][OnDoc]].
+  - Implement a canvas based version of PDF page contents in [[../ondoc/index.org][OnDoc]].
 - It might be possible to implement different backend devices to be
-  used instead of HTML 5 canvas, for example a SVG device.
+  used instead of HTML 5 canvas, for example an SVG device.
 - Investigate the possibility of implementing a Lisp interpreter
   suitable for production use in web applications.
 
@@ -395,7 +395,8 @@ See the [[https://developer.mozilla.org/en/drawing_graphics_with_canvas#section_
 
 See the [[http://oreilly.com/openbook/cgi/ch06_02.html][original example]].
 
-Click on the clock to start/stop it.
+Click on the clock to start/stop it.  (If using Chrome, you might need
+to reload the page for this to work.  Not sure why?)
 
 #+html: <canvas id="xclock2"></canvas>
 
@@ -456,31 +457,45 @@ function tiger() {(new Wps).parse($$("wps"), $$("tiger1"), $$("tiger"), $$("tige
 Is this an interesting JavaScript and canvas benchmark?
 
 #+plot: title:"tiger.eps drawing times" ind:1 deps:(2 3 4) type:2d with:histograms set:"yrange [0:]" set:"xlabel 'browser'" set:"ylabel 'time [s]'" set:"style histogram gap 3" file:"tiger.png" set:"term png size 600, 300"
-| browser          | WPS time [s] | WPS time (no bind) [s] | PostCanvas time [s] |
-|------------------+--------------+------------------------+---------------------|
-| Chrome           |          2.7 |                    4.1 |                 1.6 |
-| Opera            |         17.9 |                   12.3 |                 0   |
-| Firefox 3.0      |         21.0 |                   19.0 |                 7.4 |
-| Firefox 3.5      |         13.0 |                    9.5 |                 0   |
+| browser     | WPS time [s] | WPS time (no bind) [s] | PostCanvas time [s] |
+|-------------+--------------+------------------------+---------------------|
+| Chrome      |          2.7 |                    4.1 |                 1.6 |
+| Opera       |         17.9 |                   12.3 |                   0 |
+| Firefox 3.0 |         21.0 |                   19.0 |                 7.0 |
+| Firefox 3.5 |         13.0 |                    9.5 |                 3.3 |
+| Safari      |          2.9 |                      0 |                   0 |
 
 [[http://www.feiri.de/pcan/][PostCanvas]] runs this [[http://www.feiri.de/pcan/example1.html][example]] about 1.5 times (Chrome) to 3 times
 (Firefox) faster.  I am actually surprised that WPS runs only about
 1.5 times slower in Chrome even though it interprets almost everything
 with minimal number of operators coded directly in JavaScript
 (compared to PostCanvas which implements all operators directly in
-JavaScript).
+JavaScript).  Time for Safari was reported by Will King and even
+though it was not run on the same machine as the other tests, it shows
+that the speed is comparable to Chrome.
 
 Another surprise to me is that I expected more significant speed up
 after implementing the {{{ps(bind)}}} operator.  Why does Opera and
 Firefox get slower in this case?
 
-It should be fairly easy to speed up WPS by coding more operators
-implemented directly in JavaScript.  This could be done dynamically by
-redefining/rebinding existing operators to their optimized JavaScript
-versions.  The speed of PostCanvas could probably be taken as the best
-case that could be achieved by optimizing WPS.
+It should be fairly easy to speed WPS up by coding more operators
+directly in JavaScript.  The speed of PostCanvas could probably be
+taken as the best case that could be achieved by optimizing WPS.
 
 file:tiger.png
+
+Note by Dave Chapman:
+
+#+begin_quote
+
+I've found that reducing the number of function calls in complex
+scripts has by far the biggest gains in speed - but I guess you
+already know this. For instance, when I run the Tiger demo it takes
+about 19sec on my machine (FF3.0, dual core, 4gb ram) but according to
+the firebug profiler it's making nearly 4 million function calls (as a
+comparison PostCanvas is *only* making about 220,000 calls).
+
+#+end_quote
 
 Firefox throws error about linecap and linejoin not being supported so
 these were not used here.  Opera throws an error when running the
@@ -489,10 +504,10 @@ PostCanvas example.  The tiger does not look the same as rendered by
 really needed to get proper image as intended.
 
 It is also interesting to observe that PDF operators and their names
-probably came up from shortening/compressing "user-space" PostScript
-operators in PostScript files.  The tiger.eps file was created in 1990
-and contains some "shortcuts" that match PDF operators standardised
-later.
+probably came up from shortening/compressing common "user-space"
+PostScript operators in PostScript files.  The tiger.eps file was
+created in 1990 and contains some "shortcuts" that match PDF operators
+standardised later.
 
 * Drawing with PDF
 
@@ -504,7 +519,7 @@ PostScript.
 
 However, some aspects (e.g. colors) are handled differently in PDF
 compared to PostScript and these differences are not addressed by WPS.
-I imagine that a supporting server-side solution like [[http://logand.com/sw/ondoc/index.html][OnDoc]] would
+I imagine that a supporting server-side solution like [[../ondoc/index.org][OnDoc]] would
 provide necessary data (e.g. decomposing PDF into pages and objects,
 providing HTML 5 web fonts and font metrics) and WPS would only draw
 preprocessed page content.
@@ -527,6 +542,8 @@ See also the [[https://developer.mozilla.org/samples/canvas-tutorial/2_6_canvas_
 #+html: <script>wps.parse("save (xheart) .setGc", $$("heart"), "restore");</script>
 
 ** Rectangle example
+
+TODO find the original example
 
 #+html: <canvas id="xrect"></canvas>
 #+html: <div id="rect">
@@ -592,54 +609,70 @@ implemented in PostScript itself.
 Many JavaScript data types map quite easily to PostScript data types
 so native bindings can be implemented mostly in PostScript via
 PostScript dictionaries (JavaScript objects).  [[http://www.whatwg.org/specs/web-apps/current-work/#the-canvas-element][HTML 5 canvas API]]
-bindings are quite straightforward.  Probably the trickiest bit is
-implementing callbacks to handle [[http://en.wikipedia.org/wiki/Document_Object_Model][DOM]] events using PostScript code.
+bindings are quite straightforward.
 
 ** Native operators
 
-| category       | in                      | operator         | out                                                         |
-|----------------+-------------------------+------------------+-------------------------------------------------------------|
-| Trivial        |                         | {{{ps(true)}}}   | true                                                        |
-|                |                         | {{{ps(false)}}}  | false                                                       |
-|                |                         | {{{ps(null)}}}   | null                                                        |
-| Math           | x                       | {{{ps(neg)}}}    | -x                                                          |
-|                | x y                     | {{{ps(add)}}}    | x+y                                                         |
-|                | x y                     | {{{ps(mul)}}}    | x*y                                                         |
-|                | x y                     | {{{ps(div)}}}    | x/y                                                         |
-|                | x y                     | {{{ps(mod)}}}    | x%y                                                         |
-| Stack          |                         | {{{ps(mark)}}}   | mark                                                        |
-|                | x y                     | {{{ps(exch)}}}   | y x                                                         |
-|                |                         | {{{ps(clear)}}}  |                                                             |
-|                | x                       | {{{ps(pop)}}}    |                                                             |
-|                | any_n ...any_0 n        | {{{ps(index)}}}  | any_n ... any_0 any_n                                       |
-|                | any_(n-1) ... any_0 n j | {{{ps(roll)}}}   | any_((j-1) mod n) ... any_0 ... any_(n-1) ... any_(j mod n) |
-|                | any_1 ... any_n n       | {{{ps(copy)}}}   | any_1 ... any_n any_1 ... any_n                             |
-| Array          | array                   | {{{ps(length)}}} | n                                                           |
-| Conditionals   | x y                     | {{{ps(eq)}}}     | bool                                                        |
-|                | x y                     | {{{ps(lt)}}}     | bool                                                        |
-|                | y                       | {{{ps(not)}}}    | bool                                                        |
-|                | x y                     | {{{ps(and)}}}    | z                                                           |
-|                | x y                     | {{{ps(or)}}}     | z                                                           |
-|                | bool then else          | {{{ps(ifelse)}}} |                                                             |
-|                | n proc                  | {{{ps(repeat)}}} |                                                             |
-|                | i j k proc              | {{{ps(for)}}}    |                                                             |
-| Debugging      | x                       | {{{ps(=)}}}      |                                                             |
-|                |                         | {{{ps(pstack)}}} |                                                             |
-| Dictionaries   | n                       | {{{ps(dict)}}}   | dict                                                        |
-|                | dict key                | {{{ps(get)}}}    | any                                                         |
-|                | dict key any            | {{{ps(put)}}}    |                                                             |
-|                | sym proc                | {{{ps(def)}}}    |                                                             |
-| Arrays         | n                       | {{{ps(array)}}}  | array                                                       |
-| JavaScript FFI | dict key nargs          | .call            | any                                                         |
-|                |                         | .gc              | gc                                                          |
-|                |                         | .math            | Math                                                        |
-| HTML 5         | r g b                   | .rgb             | text                                                        |
-|                | r g b a                 | .rgba            | text                                                        |
+| category       | in                     | operator              | out                                                 |
+|----------------+------------------------+-----------------------+-----------------------------------------------------|
+| Trivial        |                        | {{{ps(true)}}}        | true                                                |
+|                |                        | {{{ps(false)}}}       | false                                               |
+|                |                        | {{{ps(null)}}}        | null                                                |
+| Math           | x y                    | {{{ps(sub)}}}         | x-y                                                 |
+|                | x y                    | {{{ps(mul)}}}         | x*y                                                 |
+|                | x y                    | {{{ps(div)}}}         | x/y                                                 |
+|                | x y                    | {{{ps(mod)}}}         | x%y                                                 |
+| Stack          |                        | {{{ps(mark)}}}        | mark                                                |
+|                |                        | {{{ps(counttomark)}}} | n                                                   |
+|                | x y                    | {{{ps(exch)}}}        | y x                                                 |
+|                | ...                    | {{{ps(clear)}}}       |                                                     |
+|                | x                      | {{{ps(pop)}}}         |                                                     |
+|                | x_n ... x_0 n          | {{{ps(index)}}}       | x_n ... x_0 x_n                                     |
+|                | x_(n-1) ... x_0 n j    | {{{ps(roll)}}}        | x_((j-1) mod n) ... x_0 ... x_(n-1) ... x_(j mod n) |
+|                | x_1 ... x_n n          | {{{ps(copy)}}}        | x_1 ... x_n x_1 ... x_n                             |
+| Array          | array                  | {{{ps(length)}}}      | n                                                   |
+|                | x_n ... x_0 array      | {{{ps(astore)}}}      | array                                               |
+|                | n                      | {{{ps(array)}}}       | array                                               |
+| Conditionals   | x y                    | {{{ps(eq)}}}          | bool                                                |
+|                | x y                    | {{{ps(lt)}}}          | bool                                                |
+| Control        | bool then else         | {{{ps(ifelse)}}}      |                                                     |
+|                | n proc                 | {{{ps(repeat)}}}      |                                                     |
+|                | i j k proc             | {{{ps(for)}}}         |                                                     |
+|                | any                    | {{{ps(exec)}}}        |                                                     |
+|                | any                    | {{{ps(cvx)}}}         | any                                                 |
+| Dictionary     | n                      | {{{ps(dict)}}}        | dict                                                |
+|                | dict key               | {{{ps(get)}}}         | any                                                 |
+|                | dict key any           | {{{ps(put)}}}         |                                                     |
+|                | dict                   | {{{ps(begin)}}}       |                                                     |
+|                |                        | {{{ps(end)}}}         |                                                     |
+|                |                        | {{{ps(currentdict)}}} | dict                                                |
+|                | sym                    | {{{ps(where)}}}       | false / dict true                                   |
+| Miscellaneous  |                        | {{{ps(save)}}}        | dstack                                              |
+|                | dstack                 | {{{ps(restore)}}}     |                                                     |
+|                | any                    | {{{ps(type)}}}        | name                                                |
+|                | bool                   | .strictBind           |                                                     |
+|                | any                    | {{{ps(bind)}}}        | any                                                 |
+| Debugging      | x                      | {{{ps(=)}}}           |                                                     |
+|                | x                      | {{{ps(==)}}}          |                                                     |
+|                |                        | {{{ps(stack)}}}       |                                                     |
+|                |                        | {{{ps(pstack)}}}      |                                                     |
+| JavaScript FFI | x_1 ... x_n dict key n | .call                 | any                                                 |
+|                |                        | .math                 | Math                                                |
+|                |                        | .date                 | (new Date)                                          |
+|                |                        | .window               | window                                              |
+|                | proc                   | .callback             | callback                                            |
+| HTML           | m                      | .minv                 | m^-1                                                |
+|                | m_1 m_2                | .mmul                 | (m_1 x m_2)                                         |
+|                | x y m                  | .xy                   | x' y'                                               |
+|                | r g b                  | .rgb                  | text                                                |
+|                | r g b a                | .rgba                 | text                                                |
 
-Some of the above operators could be implemented in PostScript instead
-of directly in JavaScript.
+Some of the above operators could still be implemented in PostScript
+instead of directly in JavaScript.
 
 ** Core operators
+
+TODO update
 
 | category     | in          | operator              | out    |
 |--------------+-------------+-----------------------+--------|
@@ -777,6 +810,8 @@ TODO [IndexGetter, IndexSetter] CanvasPixelArray
 
 ** PostScript operators
 
+TODO update
+
 |   | category | in      | operator              | out |
 |---+----------+---------+-----------------------+-----|
 | / |          | <       | <                     | <   |
@@ -791,94 +826,95 @@ TODO [IndexGetter, IndexSetter] CanvasPixelArray
 
 ** PDF operators
 
-|   | category               | operator |                                                           |
-|---+------------------------+----------+-----------------------------------------------------------|
-| / |                        | <        |                                                           |
-|   | General graphics state | w        | setlinewidth                                              |
-|   |                        | J        | ~ setlinecap                                              |
-|   |                        | j        | ~ setlinejoin                                             |
-|   |                        | M        | setmiterlimit                                             |
-|   |                        | d        | ~ setdash ?                                               |
-|   |                        | ri       |                                                           |
-|   |                        | i        | ~ {1 .min setflat}                                        |
-|   |                        | gs       |                                                           |
-|   | Special graphics state | q        | gsave                                                     |
-|   |                        | Q        | grestore                                                  |
-|   |                        | cm       | .transform                                                |
-|   | Path construction      | m        | moveto                                                    |
-|   |                        | l        | lineto                                                    |
-|   |                        | c        | .bezierCurveTo (curveto)                                  |
-|   |                        | v        | ! currentpoint cp2 p3 c {currentpoint 6 2 roll curveto}   |
-|   |                        | y        | ! cp1 p3 p3 c {2 copy curveto}                            |
-|   |                        | h        | closepath                                                 |
-|   |                        | re       | ! x y m , x+w y l , x+w y+h l , x y+h l , h               |
-|   | Path painting          | S        | stroke                                                    |
-|   |                        | s        | h S                                                       |
-|   |                        | f        | (fill)                                                    |
-|   |                        | F        | f                                                         |
-|   |                        | f*       | eofill                                                    |
-|   |                        | B        | f S ! {gsave fill grestore stroke}                        |
-|   |                        | B*       | f* S ! {gsave eofill grestore stroke}                     |
-|   |                        | b        | h b ! {closepath gsave fill grestore stroke}              |
-|   |                        | b*       | h B* ! {closepath gsave eofill grestore stroke}           |
-|   |                        | n        | ~ newpath                                                 |
-|   | Clipping paths         | W        | clip                                                      |
-|   |                        | W*       | eoclip                                                    |
-|   | Text objects           | BT       |                                                           |
-|   |                        | ET       | ~ grestore                                                |
-|   | Text state             | Tc       |                                                           |
-|   |                        | Tw       |                                                           |
-|   |                        | Tz       |                                                           |
-|   |                        | TL       |                                                           |
-|   |                        | Tf       |                                                           |
-|   |                        | Tr       |                                                           |
-|   |                        | Ts       |                                                           |
-|   | Text positioning       | Td       |                                                           |
-|   |                        | TD       |                                                           |
-|   |                        | Tm       |                                                           |
-|   |                        | T*       |                                                           |
-|   | Text showing           | Tj       | ~ show                                                    |
-|   |                        | TJ       |                                                           |
-|   |                        | '        |                                                           |
-|   |                        | "        |                                                           |
-|   | Type 3 fonts           | d0       | setcharwidth                                              |
-|   |                        | d1       | setcachedevice                                            |
-|   | Color                  | CS       |                                                           |
-|   |                        | cs       |                                                           |
-|   |                        | SC       |                                                           |
-|   |                        | SCN      |                                                           |
-|   |                        | sc       |                                                           |
-|   |                        | scn      |                                                           |
-|   |                        | G        | g                                                         |
-|   |                        | g        | setgray                                                   |
-|   |                        | RG       | rg                                                        |
-|   |                        | rg       | setrgbcolor                                               |
-|   |                        | K        | k                                                         |
-|   |                        | k        | setcmykcolor                                              |
-|   | Shading patterns       | sh       |                                                           |
-|   | Inline images          | BI       |                                                           |
-|   |                        | ID       |                                                           |
-|   |                        | EI       |                                                           |
-|   | XObjects               | Do       |                                                           |
-|   | Marked content         | MP       |                                                           |
-|   |                        | DP       |                                                           |
-|   |                        | BMC      |                                                           |
-|   |                        | BDC      |                                                           |
-|   |                        | EMC      |                                                           |
-|   | Compatibility          | BX       |                                                           |
-|   |                        | EX       |                                                           |
+|   | category               | operator | meaning                                     |
+|---+------------------------+----------+---------------------------------------------|
+| / |                        | <        |                                             |
+|   | General graphics state | w        | setlinewidth                                |
+|   |                        | J        | ~ setlinecap                                |
+|   |                        | j        | ~ setlinejoin                               |
+|   |                        | M        | setmiterlimit                               |
+|   |                        | d        | ~ setdash ?                                 |
+|   |                        | ri       |                                             |
+|   |                        | i        | 1 .min setflat                              |
+|   |                        | gs       |                                             |
+|   | Special graphics state | q        | gsave                                       |
+|   |                        | Q        | grestore                                    |
+|   |                        | cm       | .transform                                  |
+|   | Path construction      | m        | moveto                                      |
+|   |                        | l        | lineto                                      |
+|   |                        | c        | .bezierCurveTo (~ curveto)                  |
+|   |                        | v        | currentpoint 6 2 roll c                     |
+|   |                        | y        | 2 copy c                                    |
+|   |                        | h        | closepath                                   |
+|   |                        | re       | ! x y m , x+w y l , x+w y+h l , x y+h l , h |
+|   | Path painting          | S        | stroke                                      |
+|   |                        | s        | h S                                         |
+|   |                        | f        | ~ fill                                      |
+|   |                        | F        | f                                           |
+|   |                        | f*       | ~ eofill                                    |
+|   |                        | B        | f S ! q f Q S                               |
+|   |                        | B*       | f* S ! q f* Q S                             |
+|   |                        | b        | h B                                         |
+|   |                        | b*       | h B*                                        |
+|   |                        | n        | ~ newpath                                   |
+|   | Clipping paths         | W        | clip                                        |
+|   |                        | W*       | eoclip                                      |
+|   | Text objects           | BT       | ~ q                                         |
+|   |                        | ET       | ~ Q                                         |
+|   | Text state             | Tc       |                                             |
+|   |                        | Tw       |                                             |
+|   |                        | Tz       |                                             |
+|   |                        | TL       |                                             |
+|   |                        | Tf       |                                             |
+|   |                        | Tr       |                                             |
+|   |                        | Ts       |                                             |
+|   | Text positioning       | Td       |                                             |
+|   |                        | TD       |                                             |
+|   |                        | Tm       |                                             |
+|   |                        | T*       |                                             |
+|   | Text showing           | Tj       | ~ show                                      |
+|   |                        | TJ       |                                             |
+|   |                        | '        |                                             |
+|   |                        | "        |                                             |
+|   | Type 3 fonts           | d0       | setcharwidth                                |
+|   |                        | d1       | setcachedevice                              |
+|   | Color                  | CS       |                                             |
+|   |                        | cs       |                                             |
+|   |                        | SC       |                                             |
+|   |                        | SCN      |                                             |
+|   |                        | sc       |                                             |
+|   |                        | scn      |                                             |
+|   |                        | G        | g                                           |
+|   |                        | g        | setgray                                     |
+|   |                        | RG       | rg                                          |
+|   |                        | rg       | setrgbcolor                                 |
+|   |                        | K        | k                                           |
+|   |                        | k        | setcmykcolor                                |
+|   | Shading patterns       | sh       |                                             |
+|   | Inline images          | BI       |                                             |
+|   |                        | ID       |                                             |
+|   |                        | EI       |                                             |
+|   | XObjects               | Do       |                                             |
+|   | Marked content         | MP       |                                             |
+|   |                        | DP       |                                             |
+|   |                        | BMC      |                                             |
+|   |                        | BDC      |                                             |
+|   |                        | EMC      |                                             |
+|   | Compatibility          | BX       |                                             |
+|   |                        | EX       |                                             |
 
 * Supported Browsers
 
 I have tried the following browsers so far:
 
-|   | Browser | Version    | Note                               |
-|---+---------+------------+------------------------------------|
-| / |         | <          |                                    |
-|   | Firefox | 3.0.11     | no text drawing, linecap, linejoin |
-|   | Firefox | 3.5b4pre   | no text drawing, linecap, linejoin |
-|   | Opera   | 10.00 Beta | no text drawing, ugly aliasing     |
-|   | Chrome  | 3.0.189.0  | arc drawing looks partially broken |
+|   | Browser | Version                         | Note                               |
+|---+---------+---------------------------------+------------------------------------|
+| / |         | <                               |                                    |
+|   | Firefox | 3.0.11                          | no text drawing, linecap, linejoin |
+|   | Firefox | 3.5b4pre                        | ~ same as Firefox 3.0.11?          |
+|   | Opera   | 10.00 Beta                      | no text drawing, ugly aliasing     |
+|   | Chrome  | 3.0.189.0                       | lines not joined properly          |
+|   | Safari  | for Mac Version 4.0.2 (5530.19) | reported by Will King              |
 
 If you are using a different browser, please [[http://logand.com/contact.html][let me know]] if it works
 for you.
@@ -891,11 +927,22 @@ for you.
 
 * Changes
 
+2009-07-15 v0.2
+
+- Capable of drawing tiger.eps
+- JavaScript callbacks and timer added
+- bind operator implemented
+- Refactored JavaScript code: parser, evaluator and PostScript
+  interpreter separated
+- Improved documentation
+
 2009-06-30 v0.1
 
 - Initial version
 
-* References
+* Links
+
+Discussions about WPS on [[http://www.reddit.com/r/programming/comments/95xll/wps_postscript_and_pdf_interpreter_for_html_5/][reddit]] and [[http://ajaxian.com/archives/wps-postscript-and-pdf-interpreter-for-html-5-canvas][ajaxian]].
 
 [[http://www.feiri.de/pcan/][PostCanvas]] is a RPN interpreter with many PostScript operators
 implemented directly in JavaScript.  It is faster than WPS but not a
