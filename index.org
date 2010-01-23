@@ -1,0 +1,1191 @@
+* Postscript interpreter
+
+- S :: stack
+- F :: function dictionary
+
+** Trivial example
+
+#+begin_html
+<script>
+function ex1() {
+   var S = [];
+   var F = {};
+   F["+"] = function() {S.push(S.pop() + S.pop());};
+   F["."] = function() {alert(S.pop());};
+
+   S.push(1);
+   S.push(2);
+   F["."]();
+   S.push(2);
+   F["+"]();
+   F["."]();
+}
+</script>
+<button onclick="javascript:ex1()">Eval</button>
+"<tt>1 2 . 2 + .</tt>" from stack
+#+end_html
+
+** Example with simple reader
+
+#+begin_html
+<script>
+function PdfT(V) {
+   this.V = V;
+   return this;
+}
+function isPdfT(V) {
+   return V.constructor == PdfT; // TODO better test
+}
+
+function ps(L, F, S) {
+   var N = L.length;
+   var I = 0;
+   if(!S) S = [];
+
+   function member(C, L) {return 0 <= L.indexOf(C);}
+   function peek() {return I < N && L[I];}
+   function char() {return I < N && L[I++];}
+   function skip() {while(I < N && member(L[I], " \t\n")) I++;}
+
+   function comment() {
+      while("%" == peek()) {
+         while(peek() && "\n" != peek())
+            char();
+         skip();
+      }
+   }
+
+   function text() {
+      char();
+      var L = [];
+      var N = 1;
+      while(0 < N && peek()) {
+         var C = char();
+         switch(C) {
+            case "(":
+               N++;
+               break;
+            case ")":
+               N--;
+               if(N <= 0) C = false;
+               break;
+            case "\\":
+               C = char();
+               switch(C) {
+                  case "(": break;
+                  case ")": break;
+                  case "\\": break;
+                  case "n": C = "\n"; break;
+                  case "r": C = "\r"; break;
+                  case "t": C = "\t"; break;
+                  default:
+                     C = false;
+               }
+               break;
+         }
+         if(C !== false) L.push(C);
+      }
+      return new PdfT(L.join(""));
+   }
+
+   function symbol() {
+      var C = char();
+      var N = member(C, "+-0123456789.");
+      var F = "." == C;
+      var L = [C];
+      while(peek() && !member(peek(), "%/[]{}<>( \t\n")) {
+         C = char();
+         L.push(C);
+         if(N && !member(C, "0123456789")) {
+            if(!F && "." == C) F = true;
+            else N = false;
+         }
+      }
+      L = L.join("");
+      if(1 == L.length && member(L, "+-.")) N = false;      
+      return N ? (F ? parseFloat(L) : parseInt(L, 10)) : L;
+   }
+
+   function code() {
+      char();
+      var L = [];
+      while(peek()) {
+         var T = token();
+         if("}" == T) break;
+         if(T || T == 0) L.push(T);
+      }
+      return L;
+   }
+
+   function token() {
+      skip();
+      switch(peek()) {
+         case false: return undefined;
+         case "%": return comment();
+         case "[": return char();
+         case "]": return char();
+         case "{": return code();
+         case "}": return char();
+         case "(": return text();
+         default: return symbol();
+      }
+   }
+
+//   function quoted(T) {
+//      return typeof T == "string" && "/" == T.charAt(0);
+//   }
+
+   function parse(E) {
+      var G = true;
+      while(G && peek()) {
+         var T = token();
+         if(T || T == 0) {
+            if(typeof T == "number" || typeof T == "object" || quoted(T))
+               S.push(T);
+            else {
+               if(F[T]) F[T]();
+               else throw "Unknown operator '" + T + "' " + typeof T;
+               if(E == T) G = false;
+            }
+         }
+      }
+      return S;
+   }
+
+   return parse();
+}
+
+function quoted(T) {
+   return typeof T == "string" && "/" == T.charAt(0);
+}
+
+
+
+var Msie = 0 < window.navigator.userAgent.indexOf("MSIE"); // :-(
+if(!Msie && !HTMLElement.prototype.innerText) {
+   HTMLElement.prototype.__defineGetter__("innerText",
+      function () {return(this.textContent);});
+   HTMLElement.prototype.__defineSetter__("innerText",
+     function(V) {this.textContent = V;});
+}
+
+function ex2() {
+   var S = [];
+   var F = {};
+   F["+"] = function() {S.push(S.pop() + S.pop());};
+   F["dup"] = function() {var X = S.pop(); S.push(X); S.push(X);};
+   F["."] = function() {alert(S.pop());};
+   ps(document.getElementById("ex2").innerText, F, S);
+}
+</script>
+<button onclick="javascript:ex2()">Eval</button>
+"<tt id="ex2">12 34 + dup . 56 + .</tt>" from string
+#+end_html
+
+#+begin_src text
+{ /category (COOKING) }
+
+: sum
+1 2 + ;
+
+1 (sdfsdf) /Tf
+
+12 34 (cooking is fun) /Tf
+
+{ /key (value) }
+#+end_src
+
+* PDF drawing
+
+
+#+html: <div id="wps">
+#+include "wps.wps" src ps
+#+html: </div>
+
+#+html: <div id="bowtie">
+#+include "bowtie.wps" src ps
+#+html: </div>
+
+
+
+
+
+#+begin_html
+<pre id="ex3x">
+1 2.3 + -5.6 + .
+</pre>
+<pre id="ex3">
+
+%%% ps operators
+
+/setlinewidth {/lineWidth gput} def
+
+/setlinecap {/lineCap gput} def
+
+/setlinejoin {/lineJoin gput} def
+
+/setmiterlimit {/miterLimit gput} def
+
+/setgray {255 mul dup dup rgb /fillStyle gput} def
+
+%%% examples
+
+1 0 0 -1 0 446 cm % 0,0 in bottom left corner
+
+% E1
+
+q
+0 0 m 0 0 150 150 re f
+q
+0 150 255 rg
+0 0 m 15 15 120 120 re f
+q
+255 255 255 rg
+%0.5 alpha
+0 0 m 30 30 90 90 re f
+Q
+0 0 m 45 45 60 60 re f
+Q
+0 0 m 60 60 30 30 re f
+Q
+
+% E2
+
+q
+255 0 0 rg
+0 0 m 10 10 55 50 re f
+0 0 200 rg
+0 0 m 30 30 55 50 re f
+Q
+
+% E3
+
+q
+1 0 0 -1 50 200 cm
+0 0 0 rg
+%BT
+(serif) 24 Tf
+%1 0 0 1 260 254
+(Hello World) Tj
+%ET
+Q
+
+q
+0 0 255 rg
+4 0 0 4 315 204 cm
+  0 5.5 m
+-4 -5.5 l
+ 6 1    l
+-6 1    l
+ 4 -5.5 l
+f
+Q
+
+% Ex4
+
+q
+%BT
+%/F1 24 Tf
+%1 0 0 1 260 600 Tm
+%/CS1 cs 
+%63 127 127 sc
+%(Hello World)Tj
+%ET
+%100 0 127 sc
+%/CS2 CS
+%0 0 1 SC
+%315 572 m
+%299 528 l
+%339 554 l
+%291 554 l
+%331 528 l
+%b
+q
+0 255 255 rg
+4 0 0 4 315 550 cm
+0 5.5 m
+-4 -5.5 l
+ 6  1   l
+-6  1   l
+ 4 -5.5 l
+f
+Q
+%/CS1 cs
+%63 127 127 sc
+1 0 0 1 315 490 cm
+0 0 m
+  -7  23         -40   19     -15 -17   c
+  -7.5 -27.8   -11 -22       0 -35   c
+  11 -22        7.5 -27.8    15 -17    c
+  40  19          7    23        0   0 c
+b
+Q
+
+% E5
+
+1 0 0 1 100 100 cm
+
+255 255 255 rg
+75 50 m
+100 75 l
+100 25 l
+f
+
+% http://developer.mozilla.org/samples/canvas-tutorial/2_2_canvas_moveto.html
+%0 0 m
+%75 75 50 0 pi 2 * true arc
+%110 75 m
+%75 75 35 0 pi false arc
+%65 65 m
+%60 65 5 0 pi 2 * true arc
+%95 65 m
+%90 65 5 0 pi 2 * true arc
+%S
+
+% http://developer.mozilla.org/samples/canvas-tutorial/2_3_canvas_lineto.html
+
+1 0 0 1 100 100 cm
+
+25 25 m
+105 25 l
+25 105 l
+f
+
+125 125 m
+125 45 l
+45 125 l
+h S
+
+% http://developer.mozilla.org/samples/canvas-tutorial/2_5_canvas_quadraticcurveto.html
+
+1 0 0 1 100 100 cm
+
+%75 25 m
+%25 25 25 62 5 c2
+%25 100 50 100 c2
+%50 120 30 125 c2
+%60 120 65 100 c2
+%125 100 125 62.5 c2
+%125 25 75 25 c2
+%S
+
+q % heart (bezier)
+1 0 0 -1 0 0 cm
+255 0 0 rg
+75 40 m
+75 37 70 25 50 25 c
+20 25 20 62.5 20 62.5 c
+20 80 40 102 75 120 c
+110 102 130 80 130 62.5 c
+130 62.5 130 25 100 25 c
+85 25 75 37 75 40 c
+f
+Q
+
+
+/triangle {
+  255 255 255 rg
+  75 50 m
+  100 75 l
+  100 25 l
+  f
+} def
+
+/triangle2 {
+  255 0 255 rg
+  75 50 m
+  100 75 l
+  100 25 l
+  f
+} def
+
+triangle
+1 0 0 1 100 -100 cm
+triangle2
+1 0 0 1 100 -100 cm
+triangle
+
+%3 8 div 6 add .
+%6 3 8 div add .
+
+%8 7 3 mul sub .
+%7 3 mul 8 exch sub .
+
+7.2 36.0 m
+14.4 7.2 l
+S
+14.4 43.2 m
+0 -21.6 l
+S
+
+1 0 0 1 27.0 36.0 cm
+0 72 m
+72 0 l
+0 -72 l
+-72 0 l
+4 setlinewidth
+h S
+
+/pi 3.141592653589 def
+%pi .
+%pi 2 mul .
+
+/inch {72 mul} def
+%5 inch .
+
+/box {
+  0 0 m
+  72 0 l
+  0 72 l
+  -72 0 l
+  h f
+} def
+
+1 0 0 1 -452 124 cm
+box
+0 setgray fill
+1 0 0 1 27.0 36.0 cm
+box
+.4 setgray fill
+1 0 0 1 28.8 39.6 cm
+box
+.8 setgray fill
+
+% TODO not, and, or, xor
+% TODO for loop exit
+
+/factorial %stack: n --- n! (after)
+{ dup 1 gt
+  {dup 1 sub factorial mul} if
+} def
+
+%5 factorial .
+
+% https://developer.mozilla.org/samples/canvas-tutorial/4_1_canvas_fillstyle.html
+
+%  for (i=0;i<6;i++){
+%    for (j=0;j<6;j++){
+%      ctx.fillStyle = 'rgb(' + Math.floor(255-42.5*i) + ',' + 
+%                       Math.floor(255-42.5*j) + ',0)';
+%      ctx.fillRect(j*25,i*25,25,25);
+
+%0 2 6 {.} for
+
+1 1 6 { %% i
+  dup 255 exch 255 6 div mul sub %% i ii
+  1 1 6 { %% i ii j
+    dup 255 exch 255 6 div mul sub %% i ii j jj
+%    fillstyle
+%    fillrect 25 j mul | 25 i mul | 25 | 25
+  } for
+} for
+
+
+% https://developer.mozilla.org/en/drawing_graphics_with_canvas
+
+/bowtie { % fillStyle
+  200 200 200 0.3 rgba /fillStyle gput
+  -30 -30 60 60 fillRect
+  /fillStyle gput
+  1.0 /globalAlpha gput
+  newpath
+  25 25 moveto
+  -25 -25 lineto
+  25 -25 lineto
+  -25 25 lineto
+  closepath
+  fill
+} def
+
+/dot {
+  gsave
+  (black) /fillStyle gput
+  -2 -2 4 4 fillRect
+  grestore
+} def
+
+0 -100 translate
+
+45 45 translate
+
+gsave
+(red) bowtie
+dot
+grestore
+
+gsave
+85 0 translate
+45 pi mul 180 div rotate
+(green) bowtie
+dot
+grestore
+
+gsave
+0 85 translate
+135 pi mul 180 div rotate
+(blue) bowtie
+dot
+grestore
+ 
+gsave
+85 85 translate
+90 pi mul 180 div rotate
+(yellow) bowtie
+dot
+grestore
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+</pre>
+
+<script>
+function min(X, Y) {
+   return X < Y ? X : Y;
+}
+
+function max(X, Y) {
+   return X < Y ? Y : X;
+}
+
+function ex3() {
+   var S = [];
+   var F = {};
+   var W = document.getElementById("c");
+   var C = W.getContext("2d");
+
+   W.setAttribute("width", 612);
+   W.setAttribute("height", 446);
+
+   // basic operators
+
+   F["neg"] = function() {S.push(- S.pop());};
+   F["add"] = function() {S.push(S.pop() + S.pop());};
+   F["sub"] = function() {F["neg"](); F["add"]();};
+   F["mul"] = function() {S.push(S.pop() * S.pop());};
+   F["div"] = function() {
+      var X = S.pop();
+      S.push(S.pop() / X);
+   };
+   F["idiv"] = function() {
+      var X = S.pop();
+      S.push(Math.floor(S.pop() / X));
+   };
+   F["mod"] = function() {
+      var X = S.pop();
+      S.push(S.pop() % X);
+   };
+   // TODO sqrt, exp, ceiling, sin
+   F["exch"] = function() {
+      var Y = S.pop();
+      var X = S.pop();
+      S.push(Y);
+      S.push(X);
+   };
+
+   F["dup"] = function() {var X = S.pop(); S.push(X); S.push(X);};
+   F["clear"] = function() {S = [];};
+   F["pop"] = function() {S.pop();};
+   // TODO roll
+
+   F["eq"] = function() {
+      var Y = S.pop();
+      var X = S.pop();
+      S.push(X == Y);
+   };
+   F["ne"] = function() {
+      var Y = S.pop();
+      var X = S.pop();
+      S.push(X != Y);
+   };
+   F["gt"] = function() {
+      var Y = S.pop();
+      var X = S.pop();
+      S.push(X > Y);
+   };
+   F["lt"] = function() {
+      var Y = S.pop();
+      var X = S.pop();
+      S.push(X < Y);
+   };
+   F["ge"] = function() {
+      var Y = S.pop();
+      var X = S.pop();
+      S.push(X >= Y);
+   };
+   F["le"] = function() {
+      var Y = S.pop();
+      var X = S.pop();
+      S.push(X <= Y);
+   };
+
+   F["if"] = function() {
+      var B = S.pop();
+      var C = S.pop();
+      if(C == true) run(B);
+   };
+   F["ifelse"] = function() {
+      var N = S.pop();
+      var P = S.pop();
+      var C = S.pop();
+      if(C == true) run(P);
+      else run(N);
+   };
+   F["repeat"] = function() {
+      var B = S.pop();
+      var N = S.pop();
+      for(var I = 0; I < N; I++) run(B);
+   };
+   F["for"] = function() {
+      var B = S.pop();
+      var L = S.pop();
+      var K = S.pop();
+      var J = S.pop();
+      if(K < 0) {
+         for(var I = J; L <= I; I += K) {
+            S.push(I);
+            run(B);
+         }
+      } else {
+         for(var I = J; I <= L; I += K) {
+            S.push(I);
+            run(B);
+         }
+      }
+   };
+
+   F["."] = function() {alert(S.pop());};
+   F["=="] = function() {alert(S[0]);};
+   F["pstack"] = function() {alert(S);};
+
+   function run(C) {
+      if(!C.length) S.push(C);
+         else {
+            var M = C.length;
+            for(var I = 0; I < M; I++) {
+               var T = C[I];
+               if(typeof T == "number" || typeof T == "object" || quoted(T))
+                  S.push(T);
+               else {
+                  if(F[T]) F[T]();
+                  else throw "Unknown operator '" + T + "' " + typeof T;
+               }
+            }
+         }
+   }
+
+   F["def"] = function() {
+      var C = S.pop();
+      var N = S.pop();
+      if(quoted(N)) F[N.substring(1)] = function() {run(C);}
+      else throw "Wrong operator name " + N;
+   };
+
+   // html5 graphic operators
+
+   //transform
+   //setTransform
+   //createLinearGradient
+   //createRadialGradient
+   //createPatternI
+   //createPatternC
+   //createPatternV
+   F["clearRect"] = function() {
+      var H = S.pop();
+      var W = S.pop();
+      var Y = S.pop();
+      var X = S.pop();
+      C.clearRect(X, Y, W, H);
+   };
+   F["fillRect"] = function() {
+      var H = S.pop();
+      var W = S.pop();
+      var Y = S.pop();
+      var X = S.pop();
+      C.fillRect(X, Y, W, H);
+   };
+   F["strokeRect"] = function() {
+      var H = S.pop();
+      var W = S.pop();
+      var Y = S.pop();
+      var X = S.pop();
+      C.strokeRect(X, Y, W, H);
+   };
+   //quadraticCurveTo
+   F["rect"] = function() {
+      var H = S.pop();
+      var W = S.pop();
+      var Y = S.pop();
+      var X = S.pop();
+      C.strokeRect(X, Y, W, H);
+   };
+   //isPointInPath
+   //fillText
+   //strokeText
+   //measureText
+   //drawImageI1
+   //drawImageI2
+   //drawImageC1
+   //drawImageC2
+   //drawImageV1
+   //drawImageV2
+   //createImageData1
+   //createImageData2
+   //getImageData
+   //putImageData
+
+   // html5 utility operators
+
+   F["gput"] = function() {
+      var K = S.pop();
+      var V = S.pop();
+      C[K.substring(1)] = isPdfT(V) ? V.V : V;
+   };
+   F["gget"] = function() {
+      var K = S.pop();
+      S.push(C[K.substring(1)]);
+   };
+
+   F["rgb"] = function() {
+      var B = S.pop();
+      var G = S.pop();
+      var R = S.pop();
+      S.push(new PdfT("rgba(" + R + "," + G + "," + B + ")"));
+   };
+   F["rgba"] = function() {
+      var A = S.pop();
+      var B = S.pop();
+      var G = S.pop();
+      var R = S.pop();
+      S.push(new PdfT("rgba(" + R + "," + G + "," + B + "," + A + ")"));
+   };
+
+   // ps graphic operators
+
+   F["gsave"] = function() {C.save();};
+   F["grestore"] = function() {C.restore();};
+   F["scale"] = function() {
+      var Y = S.pop();
+      var X = S.pop();
+      C.scale(X, Y);
+   };
+   F["rotate"] = function() {
+      var A = S.pop();
+      C.rotate(A);
+   };
+   F["translate"] = function() {
+      var Y = S.pop();
+      var X = S.pop();
+      C.translate(X, Y);
+   };
+   F["newpath"] = function() {C.beginPath();};
+   F["closepath"] = function() {C.closePath();};
+   F["moveto"] = function() {
+      var Y = S.pop();
+      var X = S.pop();
+      C.moveTo(X, Y);
+   };
+   F["lineto"] = function() {
+      var Y = S.pop();
+      var X = S.pop();
+      C.lineTo(X, Y);
+   };
+   F["arcto"] = function() {
+      var R = S.pop();
+      var Y2 = S.pop();
+      var X2 = S.pop();
+      var Y1 = S.pop();
+      var X1 = S.pop();
+      C.arcTo(X1, Y1, X2, Y2, R);
+   };
+   F["arc"] = function() {
+      var A = S.pop();
+      var E = S.pop();
+      var S = S.pop();
+      var R = S.pop();
+      var Y = S.pop();
+      var X = S.pop();
+      C.arc(X, Y, R, S, E, A);
+   };
+   F["fill"] = function() {C.fill();};
+   F["stroke"] = function() {C.stroke();};
+   F["clip"] = function() {C.clip();};
+
+   // pdf graphic operators
+
+   F["w"] = function() {C.lineWidth = S.pop();};
+   F["J"] = function() {C.lineCap = S.pop();};
+   F["j"] = function() {C.lineJoin = S.pop();};
+   F["M"] = function() {C.mitterLimit = S.pop();};
+   F["d"] = function() {
+      var P = S.pop();
+      var A = S.pop();
+      alert("TODO d");
+   };
+   F["ri"] = function() {alert("TODO ri");};
+   F["i"] = function() {alert("TODO i");};
+   F["gs"] = function() {alert("TODO gs");};
+
+   F["q"] = function() {C.save();};
+   F["Q"] = function() {C.restore();};
+   F["cm"] = function() { // TODO fix cm
+      var Dy = S.pop();
+      var Dx = S.pop();
+      var M22 = S.pop();
+      var M21 = S.pop();
+      var M12 = S.pop();
+      var M11 = S.pop();
+      //alert(M11 +"|"+ M12 +"|"+ M21 +"|"+ M22 +"|"+ Dx +"|"+ Dy);
+      //C.setTransform(M11, M12, M21, M22, Dx, Dy);
+      C.transform(M11, M12, M21, M22, Dx, Dy);
+   };
+
+   F["m"] = function() {
+      var Y = S.pop();
+      var X = S.pop();
+      C.beginPath(); // TODO only if not m previously
+      C.moveTo(X, Y);
+   };
+   F["l"] = function() {
+      var Y = S.pop();
+      var X = S.pop();
+      C.lineTo(X, Y);
+   };
+   F["c"] = function() {
+      var Y3 = S.pop();
+      var X3 = S.pop();
+      var Y2 = S.pop();
+      var X2 = S.pop();
+      var Y1 = S.pop();
+      var X1 = S.pop();
+      C.bezierCurveTo(X1, Y1, X2, Y2, X3, Y3); // TODO the right c method
+   };
+//   F["c2"] = function() { // not in pdf
+//      var Y3 = S.pop();
+//      var X3 = S.pop();
+//      var Y2 = S.pop();
+//      var X2 = S.pop();
+//      var Y1 = S.pop();
+//      var X1 = S.pop();
+//      C.bezierCurveTo(X1, Y1, X2, Y2, X3, Y3); // TODO the right c method
+//   };
+   F["v"] = function() {alert("TODO v");};
+   F["y"] = function() {alert("TODO y");};
+   F["h"] = function() {C.closePath();};
+   F["re"] = function() {
+      var Y2 = S.pop();
+      var X2 = S.pop();
+      var Y1 = S.pop();
+      var X1 = S.pop();
+      C.rect(X1, Y1, X2, Y2);
+   };
+
+   F["S"] = function() {C.stroke();};
+   F["s"] = function() {F["h"](); F["S"]();};
+   F["f"] = function() {C.fill();};
+   F["F"] = function() {C.fill();};
+   F["f*"] = function() {alert("TODO f*");};
+   F["B"] = function() {F["f"](); F["S"]();};
+   F["B*"] = function() {F["f*"](); F["S"]();};
+   F["b"] = function() {F["h"](); F["B"]();};
+   F["b*"] = function() {F["h"](); F["B*"]();};
+   F["n"] = function() {alert("TODO n");};
+
+   F["W"] = function() {C.clip();};
+   F["W*"] = function() {alert("TODO W*");};
+
+   F["BT"] = function() {alert("TODO BT")};
+   F["ET"] = function() {alert("TODO ET")};
+
+   F["Tc"] = function() {alert("TODO Tc");};
+   F["Tw"] = function() {alert("TODO Tw");};
+   F["Tz"] = function() {alert("TODO Tz");};
+   F["TL"] = function() {alert("TODO Tf");};
+   F["Tf"] = function() {
+      var N = S.pop();
+      var F = S.pop();
+      C.font = N + "pt " + F.V;
+   };
+   F["Tr"] = function() {alert("TODO Tr");};
+   F["Ts"] = function() {alert("TODO Ts");};
+
+   F["Td"] = function() {alert("TODO Td");};
+   F["TD"] = function() {alert("TODO TD");};
+   F["Tm"] = function() {alert("TODO Tm");};
+   F["T*"] = function() {alert("TODO T*");};
+
+   F["Tj"] = function() {
+      var T = S.pop();
+      //alert(T.V);
+      //if(C.strokeText) C.strokeText(T.V, 0, 0);
+      if(C.fillText) C.fillText(T.V, 0, 0);
+   };
+   F["TJ"] = function() {alert("TODO TJ");};
+   F["'"] = function() {alert("TODO '");};
+   F["\""] = function() {alert("TODO \"");};
+
+   F["d0"] = function() {alert("TODO d0");};
+   F["d1"] = function() {alert("TODO d1");};
+
+   F["CS"] = function() {alert("TODO CS");};
+   F["cs"] = function() {alert("TODO cs");};
+   F["SC"] = function() {alert("TODO SC");};
+   F["SCN"] = function() {alert("TODO SCN");};
+   F["sc"] = function() {alert("TODO sc");};
+   F["scn"] = function() {alert("TODO scn");};
+   F["G"] = function() {alert("TODO G");};
+   F["g"] = function() {alert("TODO g");};
+   F["RG"] = function() {alert("TODO RG");};
+   F["rg"] = function() { // TODO color spaces
+      var B = S.pop();
+      var G = S.pop();
+      var R = S.pop();
+      C.fillStyle = "rgb(" + R + "," + G + "," + B + ")";
+   };
+   F["K"] = function() {alert("TODO K");};
+   F["k"] = function() {alert("TODO k");};
+
+   F["sh"] = function() {alert("TODO sh");};
+
+   F["BI"] = function() {alert("TODO BI");};
+   F["ID"] = function() {alert("TODO ID");};
+   F["EI"] = function() {alert("TODO EI");};
+
+   F["Do"] = function() {alert("TODO Do");};
+
+   F["MP"] = function() {alert("TODO MP");};
+   F["DP"] = function() {alert("TODO DP");};
+   F["BMC"] = function() {alert("TODO BMC");};
+   F["BDC"] = function() {alert("TODO BDC");};
+   F["EMC"] = function() {alert("TODO EMC");};
+
+   F["BX"] = function() {alert("TODO BX");};
+   F["EX"] = function() {alert("TODO EX");};
+
+   ps(document.getElementById("ex3").innerText, F, S);
+}
+</script>
+<button onclick="javascript:ex3()">Draw</button>
+#+end_html
+
+/MediaBox [0 0 612 446]
+
+#+html: <canvas id="c" style="width:612pt;height:446pt;background-color:yellow"/>
+
+** CanvasRenderingContext2D
+
+http://www.whatwg.org/specs/web-apps/current-work/#the-canvas-element
+
+Operators:
+
+|   | category               | operator |
+|---+------------------------+----------|
+| / |                        | <        |
+|   | General graphics state | w        |
+|   |                        | J        |
+|   |                        | j        |
+|   |                        | M        |
+|   |                        | d        |
+|   |                        | ri       |
+|   |                        | i        |
+|   |                        | gs       |
+|   | Special graphics state | q        |
+|   |                        | Q        |
+|   |                        | cm       |
+|   | Path construction      | m        |
+|   |                        | l        |
+|   |                        | c        |
+|   |                        | v        |
+|   |                        | y        |
+|   |                        | h        |
+|   |                        | re       |
+|   | Path painting          | S        |
+|   |                        | s        |
+|   |                        | f        |
+|   |                        | F        |
+|   |                        | f*       |
+|   |                        | B        |
+|   |                        | B*       |
+|   |                        | b        |
+|   |                        | b*       |
+|   |                        | n        |
+|   | Clipping paths         | W        |
+|   |                        | W*       |
+|   | Text objects           | BT       |
+|   |                        | ET       |
+|   | Text state             | Tc       |
+|   |                        | Tw       |
+|   |                        | Tz       |
+|   |                        | TL       |
+|   |                        | Tf       |
+|   |                        | Tr       |
+|   |                        | Ts       |
+|   | Text positioning       | Td       |
+|   |                        | TD       |
+|   |                        | Tm       |
+|   |                        | T*       |
+|   | Text showing           | Tj       |
+|   |                        | TJ       |
+|   |                        | '        |
+|   |                        | "        |
+|   | Type 3 fonts           | d0       |
+|   |                        | d1       |
+|   | Color                  | CS       |
+|   |                        | cs       |
+|   |                        | SC       |
+|   |                        | SCN      |
+|   |                        | sc       |
+|   |                        | scn      |
+|   |                        | G        |
+|   |                        | g        |
+|   |                        | RG       |
+|   |                        | rg       |
+|   |                        | K        |
+|   |                        | k        |
+|   | Shading patterns       | sh       |
+|   | Inline images          | BI       |
+|   |                        | ID       |
+|   |                        | EI       |
+|   | XObjects               | Do       |
+|   | Marked content         | MP       |
+|   |                        | DP       |
+|   |                        | BMC      |
+|   |                        | BDC      |
+|   |                        | EMC      |
+|   | Compatibility          | BX       |
+|   |                        | EX       |
+  
+Special graphics state q, Q, cm                 57
+Path construction      m, l, c, v, y, h, re     59
+
+??? rlineto rmoveto findfont scalefont setfont show rightshow
+stringwidth arcn loop/exit forall cvs array put get length aload
+astore mark ashow widthshow awidthshow kshow currentpoint makefont
+charpath setdash image putinterval dict begin settransfer
+readhexstring flattenpath curveto pathbbox pathforall search transform
+itransform definefont setrgbcolor setcharwidth
+
+ setmatrix
+
+octal chars in string \234
+
+
+/Times-Roman findfont typography 15 scalefont setfont
+
+
+Methods:
+
+|   | html5                | ps        | pdf  | method                                                                                                                                                       |
+|---+----------------------+-----------+------+--------------------------------------------------------------------------------------------------------------------------------------------------------------|
+| / |                      |           |      | <                                                                                                                                                            |
+|   |                      | gsave     | q    | void save();                                                                                                                                                 |
+|   |                      | grestore  | Q    | void restore();                                                                                                                                              |
+|   |                      | scale     |      | void scale(in float x, in float y);                                                                                                                          |
+|   |                      | rotate    |      | void rotate(in float angle);                                                                                                                                 |
+|   |                      | translate |      | void translate(in float x, in float y);                                                                                                                      |
+|   | transform            |           |      | void transform(in float m11, in float m12, in float m21, in float m22, in float dx, in float dy);                                                            |
+|   | setTransform         |           | cm ? | void setTransform(in float m11, in float m12, in float m21, in float m22, in float dx, in float dy);                                                         |
+|   | createLinearGradient |           |      | CanvasGradient createLinearGradient(in float x0, in float y0, in float x1, in float y1);                                                                     |
+|   | createRadialGradient |           |      | CanvasGradient createRadialGradient(in float x0, in float y0, in float r0, in float x1, in float y1, in float r1);                                           |
+|   | createPatternI       |           |      | CanvasPattern createPattern(in HTMLImageElement image, in DOMString repetition);                                                                             |
+|   | createPatternC       |           |      | CanvasPattern createPattern(in HTMLCanvasElement image, in DOMString repetition);                                                                            |
+|   | createPatternV       |           |      | CanvasPattern createPattern(in HTMLVideoElement image, in DOMString repetition);                                                                             |
+|   | clearRect            |           |      | void clearRect(in float x, in float y, in float w, in float h);                                                                                              |
+|   | fillRect             |           |      | void fillRect(in float x, in float y, in float w, in float h);                                                                                               |
+|   | strokeRect           |           |      | void strokeRect(in float x, in float y, in float w, in float h);                                                                                             |
+|   |                      | newpath   | m !  | void beginPath();                                                                                                                                            |
+|   |                      | closepath | h    | void closePath();                                                                                                                                            |
+|   |                      | moveto    |      | void moveTo(in float x, in float y);                                                                                                                         |
+|   |                      | lineto    |      | void lineTo(in float x, in float y);                                                                                                                         |
+|   | quadraticCurveTo     |           |      | void quadraticCurveTo(in float cpx, in float cpy, in float x, in float y);                                                                                   |
+|   |                      |           | c    | void bezierCurveTo(in float cp1x, in float cp1y, in float cp2x, in float cp2y, in float x, in float y);                                                      |
+|   |                      | arcto     |      | void arcTo(in float x1, in float y1, in float x2, in float y2, in float radius);                                                                             |
+|   | rect                 |           |      | void rect(in float x, in float y, in float w, in float h);                                                                                                   |
+|   |                      | arc       |      | void arc(in float x, in float y, in float radius, in float startAngle, in float endAngle, in boolean anticlockwise);                                         |
+|   |                      | fill      | f    | void fill();                                                                                                                                                 |
+|   |                      |           | F !  |                                                                                                                                                              |
+|   |                      | stroke    | S    | void stroke();                                                                                                                                               |
+|   |                      |           | s !  |                                                                                                                                                              |
+|   |                      |           | b !  |                                                                                                                                                              |
+|   |                      |           | b* ! |                                                                                                                                                              |
+|   |                      | clip      | W    | void clip();                                                                                                                                                 |
+|   |                      |           | W* ! |                                                                                                                                                              |
+|   | isPointInPath        |           |      | boolean isPointInPath(in float x, in float y);                                                                                                               |
+|   | fillText             |           |      | void fillText(in DOMString text, in float x, in float y, [Optional] in float maxWidth);                                                                      |
+|   | strokeText           |           |      | void strokeText(in DOMString text, in float x, in float y, [Optional] in float maxWidth);                                                                    |
+|   | measureText          |           |      | TextMetrics measureText(in DOMString text);                                                                                                                  |
+|   | drawImageI1          |           |      | void drawImage(in HTMLImageElement image, in float dx, in float dy, [Optional] in float dw, in float dh);                                                    |
+|   | drawImageI2          |           |      | void drawImage(in HTMLImageElement image, in float sx, in float sy, in float sw, in float sh, in float dx, in float dy, in float dw, in float dh);           |
+|   | drawImageC1          |           |      | void drawImage(in HTMLCanvasElement image, in float dx, in float dy, [Optional] in float dw, in float dh);                                                   |
+|   | drawImageC2          |           |      | void drawImage(in HTMLCanvasElement image, in float sx, in float sy, in float sw, in float sh, in float dx, in float dy, in float dw, in float dh);          |
+|   | drawImageV1          |           |      | void drawImage(in HTMLVideoElement image, in float dx, in float dy, [Optional] in float dw, in float dh);                                                    |
+|   | drawImageV2          |           |      | void drawImage(in HTMLVideoElement image, in float sx, in float sy, in float sw, in float sh, in float dx, in float dy, in float dw, in float dh);           |
+|   | createImageData1     |           |      | ImageData createImageData(in float sw, in float sh);                                                                                                         |
+|   | createImageData2     |           |      | ImageData createImageData(in ImageData imagedata);                                                                                                           |
+|   | getImageData         |           |      | ImageData getImageData(in float sx, in float sy, in float sw, in float sh);                                                                                  |
+|   | putImageData         |           |      | void putImageData(in ImageData imagedata, in float dx, in float dy, [Optional] in float dirtyX, in float dirtyY, in float dirtyWidth, in float dirtyHeight); |
+
+Attributes:
+
+|   | html5                    | ps              | pdf | attribute                                                                                    | default           |
+|---+--------------------------+-----------------+-----+----------------------------------------------------------------------------------------------+-------------------|
+| / | <                        | <               | <   | <                                                                                            | <                 |
+|   | globalAlpha              |                 |     | float globalAlpha;                                                                           | 1.0               |
+|   | globalCompositeOperation |                 |     | DOMString globalCompositeOperation;                                                          | source-over       |
+|   | strokeStyle              | (~setdash?)     |     | any strokeStyle;                                                                             | black             |
+|   | fillStyle                |                 |     | any fillStyle;                                                                               | black             |
+|   | lineWidth                | ~ setlinewidth  |     | float lineWidth;                                                                             | 1                 |
+|   | lineCap                  | ~ setlinecap    |     | DOMString lineCap; // "butt", "round", "square"                                              | butt              |
+|   | lineJoin                 | ~ setlinejoin   |     | DOMString lineJoin; // "round", "bevel", "miter"                                             | miter             |
+|   | miterLimit               | ~ setmiterlimit |     | float miterLimit;                                                                            | 10                |
+|   | shadowOffsetX            |                 |     | float shadowOffsetX;                                                                         | 0                 |
+|   | shadowOffsetY            |                 |     | float shadowOffsetY;                                                                         | 0                 |
+|   | shadowBlur               |                 |     | float shadowBlur;                                                                            | 0                 |
+|   | shadowColor              |                 |     | DOMString shadowColor;                                                                       | transparent black |
+|   | font                     |                 |     | DOMString font;                                                                              | 10px sans-serif   |
+|   | textAlign                |                 |     | DOMString textAlign; // "start", "end", "left", "right", "center"                            | start             |
+|   | textBaseline             |                 |     | DOMString textBaseline; // "top", "hanging", "middle", "alphabetic", "ideographic", "bottom" | alphabetic        |
+
+
+#+begin_src idl
+interface CanvasGradient {
+  // opaque object
+  void addColorStop(in float offset, in DOMString color);
+};
+
+interface CanvasPattern {
+  // opaque object
+};
+
+interface TextMetrics {
+  readonly attribute float width;
+};
+
+interface ImageData {
+  readonly attribute unsigned long width;
+  readonly attribute unsigned long height;
+  readonly attribute CanvasPixelArray data;
+};
+
+[IndexGetter, IndexSetter]
+interface CanvasPixelArray {
+  readonly attribute unsigned long length;
+};
+#+end_src
+
+http://canvaspaint.org/blog/2006/12/rendering-text/ \\
+http://dev.opera.com/articles/view/html-5-canvas-the-basics/ \\
+http://www.benjoffe.com/code/ \\
+http://arapehlivanian.com/wp-content/uploads/2007/02/canvas.html
