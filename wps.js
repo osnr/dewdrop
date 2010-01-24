@@ -312,6 +312,46 @@ function Wps() {
       if(J <= L) Es.push([false, J, B]);
     }
   });
+  function XforallA() {
+    var B = Os.pop();
+    var A = Os.pop();
+    var I = Os.pop();
+    var N = A.length;
+    if(1 < N - I) Es.push([true, I + 1, A, B, XforallA]);
+    if(0 < N - I) Es.push([false, A[I], B]);
+  }
+  function XforallO() {
+    var B = Os.pop();
+    var O = Os.pop();
+    var L = Os.pop();
+    var N = L.length;
+    var K;
+    if(0 < N) K = L.pop();
+    if(1 < N) Es.push([true, L, O, B, XforallO]);
+    if(0 < N) Es.push([false, K, O[K], B]);
+  }
+  def("forall", function() { // TODO in ps
+    var B = Os.pop();
+    var O = Os.pop();
+    if(isArray(O)) {
+      Os.push(0);
+      Os.push(O);
+      Os.push(B);
+      XforallA();
+    } else if(isObject(O)) {
+      var L = [];
+      for(var K in O) {L.push(K);}
+      Os.push(L);
+      Os.push(O);
+      Os.push(B);
+      XforallO();
+    } else if("string" == typeof O) {
+      Os.push(0);
+      Os.push(O.split(""));
+      Os.push(B);
+      XforallA();
+    } else throw "Cannot apply forall to " + O;
+  });
   def("exec", function() {Es.push([false, Os.pop()]);});
   def("cvx", function() {
     var X = Os.pop();
