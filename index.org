@@ -173,9 +173,9 @@ function example2(T) {
    var Sd = {};
    var Ds = [Sd];
    var Es = [];
-   Sd["+"] = function() {Os.push(Os.pop() + Os.pop());};
-   Sd["dup"] = function() {var X = Os.pop(); Os.push(X); Os.push(X);};
-   Sd["="] = function() {alert(Os.pop());};
+   Sd[new Symbol("+")] = function() {Os.push(Os.pop() + Os.pop());};
+   Sd[new Symbol("dup")] = function() {var X = Os.pop(); Os.push(X); Os.push(X);};
+   Sd[new Symbol("=")] = function() {alert(Os.pop());};
    (new Ps0(Os, Ds, Es)).parse(T); // read and interpret code T
 }
 #+end_src
@@ -653,8 +653,10 @@ bindings are quite straightforward.
 | Control        | bool then else         | {{{ps(ifelse)}}}      |                                                     |
 |                | n proc                 | {{{ps(repeat)}}}      |                                                     |
 |                | i j k proc             | {{{ps(for)}}}         |                                                     |
+|                | array/dict/string proc | {{{ps(forall)}}}      |                                                     |
 |                | any                    | {{{ps(exec)}}}        |                                                     |
 |                | any                    | {{{ps(cvx)}}}         | any                                                 |
+|                | any                    | {{{ps(cvlit)}}}       | any                                                 |
 | Dictionary     | n                      | {{{ps(dict)}}}        | dict                                                |
 |                | dict key               | {{{ps(get)}}}         | any                                                 |
 |                | dict key any           | {{{ps(put)}}}         |                                                     |
@@ -689,51 +691,53 @@ instead of directly in JavaScript.
 
 TODO update
 
-| category     | in          | operator              | out    |
-|--------------+-------------+-----------------------+--------|
-| Math         |             | {{{ps(abs)}}}         |        |
-|              |             | .acos                 |        |
-|              |             | .asin                 |        |
-|              |             | {{{ps(atan)}}}        |        |
-|              |             | .atan2                |        |
-|              |             | {{{ps(ceiling)}}}     |        |
-|              |             | {{{ps(cos)}}}         |        |
-|              |             | .exp                  |        |
-|              |             | {{{ps(floor)}}}       |        |
-|              |             | {{{ps(log)}}}         |        |
-|              |             | .max                  |        |
-|              |             | .min                  |        |
-|              |             | .pow                  |        |
-|              |             | .random               |        |
-|              |             | {{{ps(rand)}}}        |        |
-|              |             | {{{ps(round)}}}       |        |
-|              |             | {{{ps(sin)}}}         |        |
-|              |             | {{{ps(sqrt)}}}        |        |
-|              |             | .tan                  |        |
-|              |             | {{{ps(truncate)}}}    |        |
-|              |             | .e                    |        |
-|              |             | .ln2                  |        |
-|              |             | .ln10                 |        |
-|              |             | .log2e                |        |
-|              |             | .log10e               |        |
-|              |             | .pi                   |        |
-|              |             | .sqrt1_2              |        |
-|              |             | .sqrt2                |        |
-|              |             | {{{ps(sub)}}}         |        |
-|              |             | {{{ps(idiv)}}}        |        |
-| Stack        | x           | {{{ps(dup)}}}         | x x    |
-| Conditionals | x y         | {{{ps(ne)}}}          | bool   |
-|              | x y         | {{{ps(ge)}}}          | bool   |
-|              | x y         | {{{ps(le)}}}          | bool   |
-|              | x y         | {{{ps(gt)}}}          | bool   |
-|              | bool proc   | {{{ps(if)}}}          |        |
-| HTML 5       | key         | .gget                 |        |
-|              | any key     | .gput                 |        |
-|              | key nargs   | .gcall0               |        |
-|              | key nargs   | .gcall1               |        |
-|              |             | .gcanvas              | canvas |
-|              | w h         | .gdim                 |        |
-|              | x0 y0 x1 y1 | .gbox                 |        |
+| category     | in          | operator           | out    |   |
+|--------------+-------------+--------------------+--------+---|
+| Math         |             | {{{ps(abs)}}}      |        |   |
+|              |             | .acos              |        |   |
+|              |             | .asin              |        |   |
+|              |             | {{{ps(atan)}}}     |        |   |
+|              |             | .atan2             |        |   |
+|              |             | {{{ps(ceiling)}}}  |        |   |
+|              |             | {{{ps(cos)}}}      |        |   |
+|              |             | .exp               |        |   |
+|              |             | {{{ps(floor)}}}    |        |   |
+|              |             | {{{ps(log)}}}      |        |   |
+|              |             | .max               |        |   |
+|              |             | .min               |        |   |
+|              |             | .pow               |        |   |
+|              |             | .random            |        |   |
+|              |             | {{{ps(rand)}}}     |        |   |
+|              |             | {{{ps(round)}}}    |        |   |
+|              |             | {{{ps(sin)}}}      |        |   |
+|              |             | {{{ps(sqrt)}}}     |        |   |
+|              |             | .tan               |        |   |
+|              |             | {{{ps(truncate)}}} |        |   |
+|              |             | .e                 |        |   |
+|              |             | .ln2               |        |   |
+|              |             | .ln10              |        |   |
+|              |             | .log2e             |        |   |
+|              |             | .log10e            |        |   |
+|              |             | .pi                |        |   |
+|              |             | .sqrt1_2           |        |   |
+|              |             | .sqrt2             |        |   |
+|              |             | {{{ps(sub)}}}      |        |   |
+|              |             | {{{ps(idiv)}}}     |        |   |
+|              | num/string  | {{{ps(cvr)}}}      | real   |   |
+|              | num/string  | {{{ps(cvi)}}}      | int    |   |
+| Stack        | x           | {{{ps(dup)}}}      | x x    |   |
+| Conditionals | x y         | {{{ps(ne)}}}       | bool   |   |
+|              | x y         | {{{ps(ge)}}}       | bool   |   |
+|              | x y         | {{{ps(le)}}}       | bool   |   |
+|              | x y         | {{{ps(gt)}}}       | bool   |   |
+|              | bool proc   | {{{ps(if)}}}       |        |   |
+| HTML 5       | key         | .gget              |        |   |
+|              | any key     | .gput              |        |   |
+|              | key nargs   | .gcall0            |        |   |
+|              | key nargs   | .gcall1            |        |   |
+|              |             | .gcanvas           | canvas |   |
+|              | w h         | .gdim              |        |   |
+|              | x0 y0 x1 y1 | .gbox              |        |   |
 
 ** HTML 5 canvas methods and attributes
 
