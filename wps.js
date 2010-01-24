@@ -1,18 +1,11 @@
 // (c) 2009 Tomas Hlavaty
 
-function isQuoted(V) {
-  return V.q;
-}
+// random markers for quoting and toString generated using picolisp
+// (hex (in "/dev/random" (rd 4)))
 
-function quote(V) {
-  V.q = true;
-  return V;
-}
-
-function unquote(V) {
-  delete V.q;
-  return V;
-}
+function isQuoted(V) {return V.D16322F5;}
+function quote(V) {V.D16322F5 = true; return V;}
+function unquote(V) {delete V.D16322F5; return V;}
 
 function Symbol(N) {
   this.nm = N;
