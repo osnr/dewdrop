@@ -71,6 +71,9 @@ systemdict/def{currentdict 2 index 2 index put pop pop}put
 /.sqrt1_2{.math(SQRT1_2)get}.bdef
 /.sqrt2{.math(SQRT2)get}.bdef
 
+/cvr{1.0 mul}.bdef
+/cvi{round}.bdef
+
 %% html
 
 /.setTimeout{.window(setTimeout)2 .call}.bdef % cb ms -- id
@@ -283,7 +286,6 @@ initmatrix
 /stopped{}.bdef % TODO
 /loop{}.bdef % TODO !!!
 /string{}.bdef % TODO
-/cvi{}.bdef % TODO
 /pathbbox{}.bdef % TODO
 /urx{}.bdef % TODO
 /ury{}.bdef % TODO
