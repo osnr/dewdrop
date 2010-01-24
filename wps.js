@@ -31,6 +31,8 @@ function isArray(V) {
   return V &&  V.constructor === Array;
 }
 
+function isObject(V) {return "object" == typeof V;}
+
 function inDs(Ds, K) {
   for(var I = Ds.length - 1; 0 <= I; --I) {
 	if("undefined" != typeof Ds[I][K])
@@ -275,7 +277,7 @@ function Wps() {
   };
   Sd["copy"] = function() {
 	var N = Os.pop();
-	if("object" == typeof N) {
+	if(isObject(N)) {
 	  var X = Os.pop();
 	  for(var I in X)
         N[I] = X[I];
@@ -397,7 +399,7 @@ function Wps() {
     else if(isSymbol(A)) X = isQuoted(A) ? "nametype" : "operatortype";
     else if("function" == typeof A) X = "operatortype";
     else if(isArray(A)) X = "arraytype";
-    else if("object" == typeof A) X = "dicttype";
+    else if(isObject(A)) X = "dicttype";
     else if(1 * A == A) X = A % 1 == 0 ? "integertype" : "realtype";
     else throw "Undefined type '" + A + "'";
     Os.push(X);
