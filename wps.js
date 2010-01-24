@@ -43,7 +43,7 @@ function member(C, L) {
   return 0 <= L.indexOf(C);
 }
 
-function PsParser() {
+function PsParser(Ds) {
   var Self = this;
   function init(L) {
     Self.L = L;
@@ -129,7 +129,17 @@ function PsParser() {
       case "]": return new Symbol(xchar());
       case "{": Self.D++; return new Symbol(xchar());
       case "}": Self.D--; return new Symbol(xchar());
-      case "/": xchar(); var X = symbol(); return quote(X);
+      case "/":
+        xchar();
+        if("/" == peek()) {
+            xchar();
+            var X = symbol();
+            //throw "Immediate literals not implemented yet " + X.nm;
+            return inDs(Ds, symbolName(X));
+        } else {
+            var X = symbol();
+            return quote(X);
+        }
       case "(": return text();
       case "<":
         xchar();
@@ -180,7 +190,7 @@ function Ps0(Os, Ds, Es) {
       Os.push(C[I]);
     run(X, true);
   }
-  var PsP = new PsParser;
+  var PsP = new PsParser(Ds);
   function parse(L) {
     PsP.init(L);
     while(PsP.peek()) {
