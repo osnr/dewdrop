@@ -323,6 +323,13 @@ function Wps() {
     // TODO string -> parse
     else Os.push(X);
   };
+  Sd["cvlit"] = function() {
+    var X = Os.pop();
+    if(isSymbol(X) && !isQuoted(X)) Os.push(quote(X)); // un-executable name
+    else if(isArray(X) && isQuoted(X)) Os.push(unquote(X)); // un-proc
+    // TODO reverse? string -> parse
+    else Os.push(X);
+  };
   // dictionary
   Sd["dict"] = function() {Os.pop(); Os.push({});};
   Sd["get"] = function() {
