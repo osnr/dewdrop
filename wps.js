@@ -7,18 +7,10 @@ function isQuoted(V) {return V.D16322F5;}
 function quote(V) {V.D16322F5 = true; return V;}
 function unquote(V) {delete V.D16322F5; return V;}
 
-function Symbol(N) {
-  this.nm = N;
-  return this;
-}
-
-function isSymbol(V) {
-  return V &&  V.constructor === Symbol;
-}
-
-function symbolName(V) {
-  return V.nm;
-}
+function Symbol(N) {this.nm = N; return this;}
+function isSymbol(V) {return V &&  V.constructor === Symbol;}
+function symbolName(V) {return V.nm;}
+Symbol.prototype.toString = function() {return "05E2710C" + symbolName(this);};
 
 function isArray(V) {
   return V &&  V.constructor === Array;
@@ -129,8 +121,7 @@ function PsParser(Ds) {
         if("/" == peek()) {
             xchar();
             var X = symbol();
-            //throw "Immediate literals not implemented yet " + X.nm;
-            return inDs(Ds, symbolName(X));
+            return inDs(Ds, X);
         } else {
             var X = symbol();
             return quote(X);
@@ -158,11 +149,10 @@ function PsParser(Ds) {
 function Ps0(Os, Ds, Es) {
   function run(X, Z) {
     if(isSymbol(X) && !isQuoted(X)) { // executable name
-      var K = symbolName(X);
-      var D = inDs(Ds, K);
+      var D = inDs(Ds, X);
       if(!D)
-        throw "bind error '" + K + "'";
-      Es.push([false, D[K]]);
+        throw "bind error '" + X + "'";
+      Es.push([false, D[X]]);
     } else if(Z && isArray(X) && isQuoted(X)) { // proc from Es
       if(0 < X.length) {
         var F = X[0];
@@ -217,27 +207,29 @@ function Wps() {
   var Es = [];
   var Ps = new Ps0(Os, Ds, Es);
 
+  function def(Nm, Fn) {Sd[new Symbol(Nm)] = Fn;}
+
   // trivial
-  Sd["true"] = function() {Os.push(true);};
-  Sd["false"] = function() {Os.push(false);};
-  Sd["null"] = function() {Os.push(null);};
+  def("true", function() {Os.push(true);});
+  def("false", function() {Os.push(false);});
+  def("null", function() {Os.push(null);});
   // math
-  Sd["sub"] = function() {var X = Os.pop(); Os.push(Os.pop() - X);};
-  Sd["mul"] = function() {Os.push(Os.pop() * Os.pop());};
-  Sd["div"] = function() {var X = Os.pop(); Os.push(Os.pop() / X);};
-  Sd["mod"] = function() {var X = Os.pop(); Os.push(Os.pop() % X);};
+  def("sub", function() {var X = Os.pop(); Os.push(Os.pop() - X);});
+  def("mul", function() {Os.push(Os.pop() * Os.pop());});
+  def("div", function() {var X = Os.pop(); Os.push(Os.pop() / X);});
+  def("mod", function() {var X = Os.pop(); Os.push(Os.pop() % X);});
   // stack
   var M = {};
-  Sd["mark"] = function() {Os.push(M);};
-  Sd["counttomark"] = function() {
+  def("mark", function() {Os.push(M);});
+  def("counttomark", function() {
     var N = 0;
     for(var I = Os.length - 1; 0 <= I; I--)
       if(M === Os[I]) return Os.push(N);
       else N++;
     throw "Mark not found";
-  };
-  Sd["<<"] = Sd["mark"]; // TODO doc
-  Sd[">>"] = function() { // TODO doc
+  });
+  def("<<", Sd[new Symbol("mark")]); // TODO doc
+  def(">>", function() { // TODO doc
     var D = {};
     while(0 < Os.length) {
       var V = Os.pop();
@@ -245,19 +237,19 @@ function Wps() {
       D[Os.pop()] = V;
     }
     throw "Mark not found";
-  };
-  Sd["exch"] = function() {
+  });
+  def("exch", function() {
     var Y = Os.pop();
     var X = Os.pop();
     Os.push(Y);
     Os.push(X);
-  };
-  Sd["clear"] = function() {Os.length = 0;};
-  Sd["pop"] = function() {Os.pop();};
-  Sd["index"] = function() {
+  });
+  def("clear", function() {Os.length = 0;});
+  def("pop", function() {Os.pop();});
+  def("index", function() {
     Os.push(Os[Os.length - 2 - Os.pop()]);
-  };
-  Sd["roll"] = function() { // TODO in ps
+  });
+  def("roll", function() { // TODO in ps
     var J = Os.pop();
     var N = Os.pop();
     var X = [];
@@ -267,8 +259,8 @@ function Wps() {
       else Y.unshift(Os.pop());
     for(I = 0; I < J; I++) Os.push(X.shift());
     for(I = 0; I < N - J; I++) Os.push(Y.shift());
-  };
-  Sd["copy"] = function() {
+  });
+  def("copy", function() {
 	var N = Os.pop();
 	if(isObject(N)) {
 	  var X = Os.pop();
@@ -280,34 +272,34 @@ function Wps() {
       for(var I = 0; I < N; I++)
         Os.push(Os[X + I]);
     }
-  };
+  });
   // array
-  Sd["length"] = function() {Os.push(Os.pop().length);};
-  Sd["astore"] = function() {
+  def("length", function() {Os.push(Os.pop().length);});
+  def("astore", function() {
     var A = Os.pop();
     var N = A.length;
     for(var I = N - 1; 0 <= I; I--)
       A[I] = Os.pop();
     Os.push(A);
-  };
-  Sd["array"] = function() {Os.push(new Array(Os.pop()));};
+  });
+  def("array", function() {Os.push(new Array(Os.pop()));});
   // conditionals
-  Sd["eq"] = function() {var Y = Os.pop(); var X = Os.pop(); Os.push(X == Y);};
-  Sd["lt"] = function() {var Y = Os.pop(); var X = Os.pop(); Os.push(X < Y);};
+  def("eq", function() {var Y = Os.pop(); var X = Os.pop(); Os.push(X == Y);});
+  def("lt", function() {var Y = Os.pop(); var X = Os.pop(); Os.push(X < Y);});
   // control
-  Sd["ifelse"] = function() {
+  def("ifelse", function() {
     var N = Os.pop();
     var P = Os.pop();
     var C = Os.pop();
     Es.push([false, C === true ? P : N]);
-  };
-  Sd["repeat"] = function Xrepeat() { // TODO in ps
+  });
+  def("repeat", function Xrepeat() { // TODO in ps
     var B = Os.pop();
     var N = Os.pop();
     if(1 < N) Es.push([true, N - 1, B, Xrepeat]);
     if(0 < N) Es.push([false, B]);
-  };
-  Sd["for"] = function Xfor() { // TODO in ps
+  });
+  def("for", function Xfor() { // TODO in ps
     var B = Os.pop();
     var L = Os.pop();
     var K = Os.pop();
@@ -319,52 +311,52 @@ function Wps() {
       if(J + K <= L) Es.push([true, J + K, K, L, B, Xfor]);
       if(J <= L) Es.push([false, J, B]);
     }
-  };
-  Sd["exec"] = function() {Es.push([false, Os.pop()]);};
-  Sd["cvx"] = function() {
+  });
+  def("exec", function() {Es.push([false, Os.pop()]);});
+  def("cvx", function() {
     var X = Os.pop();
     if(isSymbol(X) && isQuoted(X)) Os.push(unquote(X)); // executable name
     else if(isArray(X) && !isQuoted(X)) Os.push(quote(X)); // proc
     // TODO string -> parse
     else Os.push(X);
-  };
-  Sd["cvlit"] = function() {
+  });
+  def("cvlit", function() {
     var X = Os.pop();
     if(isSymbol(X) && !isQuoted(X)) Os.push(quote(X)); // un-executable name
     else if(isArray(X) && isQuoted(X)) Os.push(unquote(X)); // un-proc
     // TODO reverse? string -> parse
     else Os.push(X);
-  };
+  });
   // dictionary
-  Sd["dict"] = function() {Os.pop(); Os.push({});};
-  Sd["get"] = function() {
+  def("dict", function() {Os.pop(); Os.push({});});
+  def("get", function() {
     var K = Os.pop();
     var D = Os.pop();
     // TODO other datatypes
-    if(isSymbol(K)) Os.push(D[symbolName(K)]);
+    if(isSymbol(K)) Os.push(D[K]);
     else Os.push(D[K]);
-  };
-  Sd["put"] = function() {
+  });
+  def("put", function() {
     var V = Os.pop();
     var K = Os.pop();
     var D = Os.pop();
     // TODO other datatypes
-    if(isSymbol(K)) D[symbolName(K)] = V;
+    if(isSymbol(K)) D[K] = V;
     else D[K] = V;
-  };
-  Sd["begin"] = function() {Ds.push(Os.pop());};
-  Sd["end"] = function() {Ds.pop();};
-  Sd["currentdict"] = function() {Os.push(Ds[Ds.length - 1]);};
-  Sd["where"] = function() {
-    var K = symbolName(Os.pop());
+  });
+  def("begin", function() {Ds.push(Os.pop());});
+  def("end", function() {Ds.pop();});
+  def("currentdict", function() {Os.push(Ds[Ds.length - 1]);});
+  def("where", function() {
+    var K = Os.pop();
     var D = inDs(Ds, K);
 	if(D) {
 	  Os.push(D);
 	  Os.push(true);
 	} else Os.push(false);
-  };
+  });
   // miscellaneous
-  Sd["save"] = function() {
+  def("save", function() {
     var X = Ds.slice();
     for(var I = 0; I < X.length; I++) {
       var A = X[I];
@@ -374,15 +366,15 @@ function Wps() {
       X[I] = B;
     }
     Os.push(X);
-  };
-  Sd["restore"] = function() {
+  });
+  def("restore", function() {
     var X = Os.pop();
     while(0 < Ds.length)
       Ds.pop();
     while(0 < X.length)
       Ds.unshift(X.pop());
-  };
-  Sd["type"] = function() {
+  });
+  def("type", function() {
     var A = Os.pop();
     var X;
     if(null === A) X = "nulltype";
@@ -401,19 +393,18 @@ function Wps() {
     // fonttype
     // gstatetype (LanguageLevel 2)
     // savetype
-  };
+  });
   var Sb = true;
-  Sd[".strictBind"] = function() {Sb = true === Os.pop();};
-  Sd["bind"] = function() {Os.push(bind(Os.pop()));};
+  def(".strictBind", function() {Sb = true === Os.pop();});
+  def("bind", function() {Os.push(bind(Os.pop()));});
   function bind(X) {
     if(isSymbol(X) && !isQuoted(X)) {
-      var K = symbolName(X);
-      var D = inDs(Ds, K);
+      var D = inDs(Ds, X);
       if(Sb) {
         if(!D)
-          throw "bind error '" + K + "'";
-        return bind(D[K]);
-      } else return !D ? X : bind(D[K]);
+          throw "bind error '" + X + "'";
+        return bind(D[X]);
+      } else return !D ? X : bind(D[X]);
     } else if(isArray(X) && isQuoted(X)) {
       var N = X.length;
       var A = [];
@@ -430,39 +421,39 @@ function Wps() {
     return X;
   }
   // debugging
-  Sd["="] = function() {var X = Os.pop(); alert(X && X.nm || X);}; // TODO
-  Sd["=="] = function() {alert(Os.pop());}; // TODO
-  Sd["stack"] = function() {alert(Os);}; // TODO
-  Sd["pstack"] = function() {alert(Os);}; // TODO
+  def("=", function() {var X = Os.pop(); alert(X);}); // TODO
+  def("==", function() {alert(Os.pop());}); // TODO
+  def("stack", function() {alert(Os);}); // TODO
+  def("pstack", function() {alert(Os);}); // TODO
   // js ffi
-  Sd[".call"] = function() {
+  def(".call", function() {
     var N = Os.pop();
     var K = Os.pop();
     var D = Os.pop();
     var X = [];
     for(var I = 0; I < N; I++) X.unshift(Os.pop());
     Os.push(D[K].apply(D, X));
-  };
-  Sd[".math"] = function() {Os.push(Math);};
-  Sd[".date"] = function() {Os.push(new Date());}; // TODO split new and Date
-  Sd[".window"] = function() {Os.push(window);};
-  Sd[".callback"] = function() { // TODO event arg?
+  });
+  def(".math", function() {Os.push(Math);});
+  def(".date", function() {Os.push(new Date());}); // TODO split new and Date
+  def(".window", function() {Os.push(window);});
+  def(".callback", function() { // TODO event arg?
     var X = Os.pop();
     Os.push(function() {
               Ps.run(X, true);
               while(0 < Es.length)
                 Ps.step();
             });
-  };
+  });
   // html5
-  Sd[".minv"] = function() { // TODO in ps
+  def(".minv", function() { // TODO in ps
     var M = Os.pop();
     var a = M[0]; var b = M[1];
     var d = M[2]; var e = M[3];
     var g = M[4]; var h = M[5];
     Os.push([e, b, d, a, d*h-e*g, b*g-a*h]);
-  };
-  Sd[".mmul"] = function() { // TODO in ps
+  });
+  def(".mmul", function() { // TODO in ps
     var B = Os.pop();
     var A = Os.pop();
     var a = A[0]; var b = A[1];
@@ -472,28 +463,28 @@ function Wps() {
     var u = B[2]; var v = B[3];
     var x = B[4]; var y = B[5];
     Os.push([a*r+b*u, a*s+b*v, d*r+e*u, d*s+e*v, g*r+h*u+x, g*s+h*v+y]);
-  };
-  Sd[".xy"] = function() { // TODO in ps
+  });
+  def(".xy", function() { // TODO in ps
     var M = Os.pop();
     var Y = Os.pop();
     var X = Os.pop();
     Os.push(M[0] * X + M[2] * Y + M[4]);
     Os.push(M[1] * X + M[3] * Y + M[5]);
-  };
+  });
   // TODO js ffi to manipulate strings so the following can be in ps
-  Sd[".rgb"] = function() { // TODO in ps
+  def(".rgb", function() { // TODO in ps
     var B = Os.pop();
     var G = Os.pop();
     var R = Os.pop();
     Os.push("rgb(" + R + "," + G + "," + B + ")");
-  };
-  Sd[".rgba"] = function() { // TODO in ps
+  });
+  def(".rgba", function() { // TODO in ps
     var A = Os.pop();
     var B = Os.pop();
     var G = Os.pop();
     var R = Os.pop();
     Os.push("rgba(" + R + "," + G + "," + B + "," + A + ")");
-  };
+  });
 
   function parse() {
     var T = arguments;
