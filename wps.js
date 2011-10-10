@@ -109,7 +109,7 @@ function PsParser(Ds) {
   }
   function token() {
     skip();
-    switch(peek()) { // TODO read dict in <> <~~> <<>> immediate literal //
+    switch(peek()) { // TODO read dict in <> <~~>
       case false: return undefined;
       case "%": return comment();
       case "[": return new Symbol(xchar());
