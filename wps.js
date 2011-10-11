@@ -1,4 +1,8 @@
-// (c) 2009 Tomas Hlavaty
+/// WPS: PostScript and PDF interpreter for HTML 5 canvas
+/// http://logand.com/sw/wps/index.html
+/// (c) 2009, 2010, 2011 Tomas Hlavaty
+/// Licensed under the GPLv3+ license.
+/// http://www.fsf.org/licensing/licenses/gpl.html
 
 // random markers for quoting and toString generated using picolisp
 // (hex (in "/dev/random" (rd 4)))
