@@ -11,7 +11,7 @@ function isQuoted(V) {return V.D16322F5;}
 function quote(V) {V.D16322F5 = true; return V;}
 function unquote(V) {delete V.D16322F5; return V;}
 
-function Symbol(N) {this.nm = N; return this;}
+function Symbol(N): void {this.nm = N; return this;}
 function isSymbol(V) {return V &&  V.constructor === Symbol;}
 function symbolName(V) {return V.nm;}
 Symbol.prototype.toString = function() {return "05E2710C" + symbolName(this);};
@@ -34,7 +34,7 @@ function member(C, L) {
   return 0 <= L.indexOf(C);
 }
 
-function PsParser(Ds) {
+function PsParser(Ds): void {
   var Self = this;
   function init(L) {
     Self.L = L;
@@ -98,7 +98,7 @@ function PsParser(Ds) {
     if(member(C, "()<>/% \t\n")) throw "Symbol expected, got " + C;
     var N = member(C, "+-0123456789.");
     var F = "." == C;
-    var L = [C];
+    var L: any = [C];
     while(peek() && !member(peek(), "()<>[]{}/% \t\n")) {
       C = xchar();
       L.push(C);
@@ -150,7 +150,7 @@ function PsParser(Ds) {
   return this;
 }
 
-function Ps0(Os, Ds, Es) {
+function Ps0(Os, Ds, Es): void {
   function run(X, Z) {
     if(isSymbol(X) && !isQuoted(X)) { // executable name
       var D = inDs(Ds, X);
@@ -204,7 +204,7 @@ function Ps0(Os, Ds, Es) {
   return this;
 }
 
-function Wps() {
+export default function Wps(): void {
   var Os = [];
   var Sd = {};
   var Ds = [Sd];
@@ -265,15 +265,15 @@ function Wps() {
     for(I = 0; I < N - J; I++) Os.push(Y.shift());
   });
   def("copy", function() {
-	var N = Os.pop();
-	if(isObject(N)) {
-	  var X = Os.pop();
-	  for(var I in X)
+    var N = Os.pop();
+    if(isObject(N)) {
+      var X = Os.pop();
+      for(const I in X)
         N[I] = X[I];
       Os.push(N);
     } else {
-      var X = Os.length - N;
-      for(var I = 0; I < N; I++)
+      var X: any = Os.length - N;
+      for(var I: any = 0; I < N; I++)
         Os.push(Os[X + I]);
     }
   });

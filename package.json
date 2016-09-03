@@ -1,0 +1,28 @@
+{
+  "name": "dewdrop",
+  "version": "1.0.0",
+  "description": "NeWS implementation.",
+  "main": "build/lib/index.js",
+  "directories": {
+    "example": "examples",
+    "test": "test"
+  },
+  "scripts": {
+    "test": "mocha --compilers ts:ts-node/register,tsx:ts-node/register test"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/osnr/dewdrop.git"
+  },
+  "author": "Omar Rizwan <omar.rizwan@gmail.com>",
+  "license": "MIT",
+  "bugs": {
+    "url": "https://github.com/osnr/dewdrop/issues"
+  },
+  "homepage": "https://github.com/osnr/dewdrop#readme",
+  "devDependencies": {
+    "canvas": "^1.4.0",
+    "mocha": "^3.0.2"
+  },
+  "dependencies": {}
+}
