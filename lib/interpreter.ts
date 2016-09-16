@@ -150,258 +150,271 @@ function PsParser(Ds): void {
   return this;
 }
 
-function Ps0(Os, Ds, Es): void {
-  function run(X, Z) {
+class Ps0 {
+  constructor(public Os = [], public Ds = [], public Es = []) {
+    console.log('new Ps0', Os.length, Ds.length, Es.length);
+  }
+
+  async run(X, Z) {
     if(isSymbol(X) && !isQuoted(X)) { // executable name
-      var D = inDs(Ds, X);
-      if(!D)
+      var D = inDs(this.Ds, X);
+      if(!D) {
         throw "bind error '" + X + "'";
-      Es.push([false, D[X]]);
+      }
+      this.Es.push([false, D[X]]);
     } else if(Z && isArray(X) && isQuoted(X)) { // proc from Es
       if(0 < X.length) {
         var F = X[0];
         var R = quote(X.slice(1));
-        if(0 < R.length) Es.push([false, R]);
-        run(F, false);
+        if(0 < R.length) this.Es.push([false, R]);
+        await this.run(F, false);
       }
-    } else if("function" == typeof X) X(); // operator
-    else Os.push(X);
+    } else if("function" == typeof X) await X.call(this); // operator
+    else this.Os.push(X);
   }
-  function exec() {
-    var X = Os.pop();
-    run(X, false);
+
+  exec() {
+    var X = this.Os.pop();
+    this.run(X, false);
   }
-  function step() {
-    var C = Es.pop();
+
+  step() {
+    var C = this.Es.pop();
     var L = C.shift(); // TODO use for 'exit'
     var X = C.pop();
     for(var I = 0; I < C.length; I++)
-      Os.push(C[I]);
-    run(X, true);
+      this.Os.push(C[I]);
+    this.run(X, true);
   }
-  var PsP = new PsParser(Ds);
-  function parse(L) {
-    PsP.init(L);
-    while(PsP.peek()) {
-      var T = PsP.token();
+
+  PsP = new PsParser(this.Ds);
+  parse(L) {
+    this.PsP.init(L);
+    while(this.PsP.peek()) {
+      var T = this.PsP.token();
       if(T || T === 0) {
-        Os.push(T);
-        if(PsP.D <= 0 || isSymbol(T) &&
+        this.Os.push(T);
+        if(this.PsP.D <= 0 || isSymbol(T) &&
            (member(symbolName(T), "[]{}") ||
             "<<" == symbolName(T) || ">>" == symbolName(T))) {
-          exec();
-          while(0 < Es.length)
-            step();
+          this.exec();
+          while(0 < this.Es.length)
+            this.step();
         }
       }
     }
-    return Os;
+    return this.Os;
   }
-  Ps0.prototype.run = run;
-  Ps0.prototype.exec = exec;
-  Ps0.prototype.step = step;
-  Ps0.prototype.parse = parse;
-  return this;
+
+  fork() {
+    return new Ps0(this.Os.slice(0), this.Ds.slice(0), []);
+  }
 }
 
-export default function Wps(): void {
-  var Os = [];
+function WpsMixin(Ps: Ps0) {
   var Sd = {};
-  var Ds = [Sd];
-  var Es = [];
-  var Ps = new Ps0(Os, Ds, Es);
+  Ps.Ds.push(Sd);
 
   function def(Nm, Fn) {Sd[new Symbol(Nm)] = Fn;}
 
+  // Question: how can I rebind Os in the forked environment to the
+  // cloned Os? they're all bound lexically here, and the function
+  // refs are preserved when I duplicate the symbol dictionary..
+
+  // FIXME make this.Ps instead of Ps. ALL context must be dynamically
+  // bound so it can be rewritten on the fork.
+  // this will fix the issue where literals like 3, 5, etc are not pushed onto the forkee stack properly.
+  // I think the massive printout is actually just the child process object? that might not be such a big deal
+
   // trivial
-  def("true", function() {Os.push(true);});
-  def("false", function() {Os.push(false);});
-  def("null", function() {Os.push(null);});
+  def("true", function() {this.Os.push(true);});
+  def("false", function() {this.Os.push(false);});
+  def("null", function() {this.Os.push(null);});
   // math
-  def("sub", function() {var X = Os.pop(); Os.push(Os.pop() - X);});
-  def("mul", function() {Os.push(Os.pop() * Os.pop());});
-  def("div", function() {var X = Os.pop(); Os.push(Os.pop() / X);});
-  def("mod", function() {var X = Os.pop(); Os.push(Os.pop() % X);});
+  def("sub", function() {var X = this.Os.pop(); this.Os.push(this.Os.pop() - X);});
+  def("mul", function() {this.Os.push(this.Os.pop() * this.Os.pop());});
+  def("div", function() {var X = this.Os.pop(); this.Os.push(this.Os.pop() / X);});
+  def("mod", function() {var X = this.Os.pop(); this.Os.push(this.Os.pop() % X);});
   // stack
   var M = {};
-  def("mark", function() {Os.push(M);});
+  def("mark", function() {this.Os.push(M);});
   def("counttomark", function() {
     var N = 0;
-    for(var I = Os.length - 1; 0 <= I; I--)
-      if(M === Os[I]) return Os.push(N);
+    for(var I = this.Os.length - 1; 0 <= I; I--)
+      if(M === this.Os[I]) return this.Os.push(N);
       else N++;
     throw "Mark not found";
   });
   def("<<", Sd[new Symbol("mark")]); // TODO doc
   def(">>", function() { // TODO doc
     var D = {};
-    while(0 < Os.length) {
-      var V = Os.pop();
-      if(M === V) return Os.push(D);
-      D[Os.pop()] = V;
+    while(0 < this.Os.length) {
+      var V = this.Os.pop();
+      if(M === V) return this.Os.push(D);
+      D[this.Os.pop()] = V;
     }
     throw "Mark not found";
   });
   def("exch", function() {
-    var Y = Os.pop();
-    var X = Os.pop();
-    Os.push(Y);
-    Os.push(X);
+    var Y = this.Os.pop();
+    var X = this.Os.pop();
+    this.Os.push(Y);
+    this.Os.push(X);
   });
-  def("clear", function() {Os.length = 0;});
-  def("pop", function() {Os.pop();});
+  def("clear", function() {this.Os.length = 0;});
+  def("pop", function() {this.Os.pop();});
   def("index", function() {
-    Os.push(Os[Os.length - 2 - Os.pop()]);
+    this.Os.push(this.Os[this.Os.length - 2 - this.Os.pop()]);
   });
   def("roll", function() { // TODO in ps
-    var J = Os.pop();
-    var N = Os.pop();
+    var J = this.Os.pop();
+    var N = this.Os.pop();
     var X = [];
     var Y = [];
     for(var I = 0; I < N; I++)
-      if(I < J) X.unshift(Os.pop());
-      else Y.unshift(Os.pop());
-    for(I = 0; I < J; I++) Os.push(X.shift());
-    for(I = 0; I < N - J; I++) Os.push(Y.shift());
+      if(I < J) X.unshift(this.Os.pop());
+      else Y.unshift(this.Os.pop());
+    for(I = 0; I < J; I++) this.Os.push(X.shift());
+    for(I = 0; I < N - J; I++) this.Os.push(Y.shift());
   });
   def("copy", function() {
-    var N = Os.pop();
+    var N = this.Os.pop();
     if(isObject(N)) {
-      var X = Os.pop();
+      var X = this.Os.pop();
       for(const I in X)
         N[I] = X[I];
-      Os.push(N);
+      this.Os.push(N);
     } else {
-      var X: any = Os.length - N;
+      var X: any = this.Os.length - N;
       for(var I: any = 0; I < N; I++)
-        Os.push(Os[X + I]);
+        this.Os.push(this.Os[X + I]);
     }
   });
   // array
-  def("length", function() {Os.push(Os.pop().length);});
+  def("length", function() {this.Os.push(this.Os.pop().length);});
   def("astore", function() {
-    var A = Os.pop();
+    var A = this.Os.pop();
     var N = A.length;
     for(var I = N - 1; 0 <= I; I--)
-      A[I] = Os.pop();
-    Os.push(A);
+      A[I] = this.Os.pop();
+    this.Os.push(A);
   });
-  def("array", function() {Os.push(new Array(Os.pop()));});
+  def("array", function() {this.Os.push(new Array(this.Os.pop()));});
   // conditionals
-  def("eq", function() {var Y = Os.pop(); var X = Os.pop(); Os.push(X == Y);});
-  def("lt", function() {var Y = Os.pop(); var X = Os.pop(); Os.push(X < Y);});
+  def("eq", function() {var Y = this.Os.pop(); var X = this.Os.pop(); this.Os.push(X == Y);});
+  def("lt", function() {var Y = this.Os.pop(); var X = this.Os.pop(); this.Os.push(X < Y);});
   // control
   def("ifelse", function() {
-    var N = Os.pop();
-    var P = Os.pop();
-    var C = Os.pop();
-    Es.push([false, C === true ? P : N]);
+    var N = this.Os.pop();
+    var P = this.Os.pop();
+    var C = this.Os.pop();
+    this.Es.push([false, C === true ? P : N]);
   });
   def("repeat", function Xrepeat() { // TODO in ps
-    var B = Os.pop();
-    var N = Os.pop();
-    if(1 < N) Es.push([true, N - 1, B, Xrepeat]);
-    if(0 < N) Es.push([false, B]);
+    var B = this.Os.pop();
+    var N = this.Os.pop();
+    if(1 < N) this.Es.push([true, N - 1, B, Xrepeat]);
+    if(0 < N) this.Es.push([false, B]);
   });
   def("for", function Xfor() { // TODO in ps
-    var B = Os.pop();
-    var L = Os.pop();
-    var K = Os.pop();
-    var J = Os.pop();
+    var B = this.Os.pop();
+    var L = this.Os.pop();
+    var K = this.Os.pop();
+    var J = this.Os.pop();
     if(K < 0) {
-      if(L <= J + K) Es.push([true, J + K, K, L, B, Xfor]);
-      if(L <= J) Es.push([false, J, B]);
+      if(L <= J + K) this.Es.push([true, J + K, K, L, B, Xfor]);
+      if(L <= J) this.Es.push([false, J, B]);
     } else {
-      if(J + K <= L) Es.push([true, J + K, K, L, B, Xfor]);
-      if(J <= L) Es.push([false, J, B]);
+      if(J + K <= L) this.Es.push([true, J + K, K, L, B, Xfor]);
+      if(J <= L) this.Es.push([false, J, B]);
     }
   });
   function XforallA() {
-    var B = Os.pop();
-    var A = Os.pop();
-    var I = Os.pop();
+    var B = this.Os.pop();
+    var A = this.Os.pop();
+    var I = this.Os.pop();
     var N = A.length;
-    if(1 < N - I) Es.push([true, I + 1, A, B, XforallA]);
-    if(0 < N - I) Es.push([false, A[I], B]);
+    if(1 < N - I) this.Es.push([true, I + 1, A, B, XforallA]);
+    if(0 < N - I) this.Es.push([false, A[I], B]);
   }
   function XforallO() {
-    var B = Os.pop();
-    var O = Os.pop();
-    var L = Os.pop();
+    var B = this.Os.pop();
+    var O = this.Os.pop();
+    var L = this.Os.pop();
     var N = L.length;
     var K;
     if(0 < N) K = L.pop();
-    if(1 < N) Es.push([true, L, O, B, XforallO]);
-    if(0 < N) Es.push([false, K, O[K], B]);
+    if(1 < N) this.Es.push([true, L, O, B, XforallO]);
+    if(0 < N) this.Es.push([false, K, O[K], B]);
   }
   def("forall", function() { // TODO in ps
-    var B = Os.pop();
-    var O = Os.pop();
+    var B = this.Os.pop();
+    var O = this.Os.pop();
     if(isArray(O)) {
-      Os.push(0);
-      Os.push(O);
-      Os.push(B);
+      this.Os.push(0);
+      this.Os.push(O);
+      this.Os.push(B);
       XforallA();
     } else if(isObject(O)) {
       var L = [];
       for(var K in O) {L.push(K);}
-      Os.push(L);
-      Os.push(O);
-      Os.push(B);
+      this.Os.push(L);
+      this.Os.push(O);
+      this.Os.push(B);
       XforallO();
     } else if("string" == typeof O) {
-      Os.push(0);
-      Os.push(O.split(""));
-      Os.push(B);
+      this.Os.push(0);
+      this.Os.push(O.split(""));
+      this.Os.push(B);
       XforallA();
     } else throw "Cannot apply forall to " + O;
   });
-  def("exec", function() {Es.push([false, Os.pop()]);});
+  def("exec", function() {this.Es.push([false, this.Os.pop()]);});
   def("cvx", function() {
-    var X = Os.pop();
-    if(isSymbol(X) && isQuoted(X)) Os.push(unquote(X)); // executable name
-    else if(isArray(X) && !isQuoted(X)) Os.push(quote(X)); // proc
+    var X = this.Os.pop();
+    if(isSymbol(X) && isQuoted(X)) this.Os.push(unquote(X)); // executable name
+    else if(isArray(X) && !isQuoted(X)) this.Os.push(quote(X)); // proc
     // TODO string -> parse
-    else Os.push(X);
+    else this.Os.push(X);
   });
   def("cvlit", function() {
-    var X = Os.pop();
-    if(isSymbol(X) && !isQuoted(X)) Os.push(quote(X)); // un-executable name
-    else if(isArray(X) && isQuoted(X)) Os.push(unquote(X)); // un-proc
+    var X = this.Os.pop();
+    if(isSymbol(X) && !isQuoted(X)) this.Os.push(quote(X)); // un-executable name
+    else if(isArray(X) && isQuoted(X)) this.Os.push(unquote(X)); // un-proc
     // TODO reverse? string -> parse
-    else Os.push(X);
+    else this.Os.push(X);
   });
   // dictionary
-  def("dict", function() {Os.pop(); Os.push({});});
+  def("dict", function() {this.Os.pop(); this.Os.push({});});
   def("get", function() {
-    var K = Os.pop();
-    var D = Os.pop();
+    var K = this.Os.pop();
+    var D = this.Os.pop();
     // TODO other datatypes
-    if(isSymbol(K)) Os.push(D[K]);
-    else Os.push(D[K]);
+    if(isSymbol(K)) this.Os.push(D[K]);
+    else this.Os.push(D[K]);
   });
   def("put", function() {
-    var V = Os.pop();
-    var K = Os.pop();
-    var D = Os.pop();
+    var V = this.Os.pop();
+    var K = this.Os.pop();
+    var D = this.Os.pop();
     // TODO other datatypes
     if(isSymbol(K)) D[K] = V;
     else D[K] = V;
   });
-  def("begin", function() {Ds.push(Os.pop());});
-  def("end", function() {Ds.pop();});
-  def("currentdict", function() {Os.push(Ds[Ds.length - 1]);});
+  def("begin", function() {this.Ds.push(this.Os.pop());});
+  def("end", function() {this.Ds.pop();});
+  def("currentdict", function() {this.Os.push(this.Ds[this.Ds.length - 1]);});
   def("where", function() {
-    var K = Os.pop();
-    var D = inDs(Ds, K);
+    var K = this.Os.pop();
+    var D = inDs(this.Ds, K);
 	if(D) {
-	  Os.push(D);
-	  Os.push(true);
-	} else Os.push(false);
+	  this.Os.push(D);
+	  this.Os.push(true);
+	} else this.Os.push(false);
   });
   // miscellaneous
   def("save", function() {
-    var X = Ds.slice();
+    var X = this.Ds.slice();
     for(var I = 0; I < X.length; I++) {
       var A = X[I];
       var B = {};
@@ -409,17 +422,17 @@ export default function Wps(): void {
         B[J] = A[J];
       X[I] = B;
     }
-    Os.push(X);
+    this.Os.push(X);
   });
   def("restore", function() {
-    var X = Os.pop();
-    while(0 < Ds.length)
-      Ds.pop();
+    var X = this.Os.pop();
+    while(0 < this.Ds.length)
+      this.Ds.pop();
     while(0 < X.length)
-      Ds.unshift(X.pop());
+      this.Ds.unshift(X.pop());
   });
   def("type", function() {
-    var A = Os.pop();
+    var A = this.Os.pop();
     var X;
     if(null === A) X = "nulltype";
     else if(true === A || false === A) X = "booleantype";
@@ -431,7 +444,7 @@ export default function Wps(): void {
     else if(isObject(A)) X = "dicttype";
     else if(1 * A == A) X = A % 1 == 0 ? "integertype" : "realtype";
     else throw "Undefined type '" + A + "'";
-    Os.push(X);
+    this.Os.push(X);
     // filetype
     // packedarraytype (LanguageLevel 2)
     // fonttype
@@ -439,11 +452,11 @@ export default function Wps(): void {
     // savetype
   });
   var Sb = true;
-  def(".strictBind", function() {Sb = true === Os.pop();});
-  def("bind", function() {Os.push(bind(Os.pop()));});
+  def(".strictBind", function() {Sb = true === this.Os.pop();});
+  def("bind", function() {this.Os.push(bind(this.Os.pop()));});
   function bind(X) {
     if(isSymbol(X) && !isQuoted(X)) {
-      var D = inDs(Ds, X);
+      var D = inDs(this.Ds, X);
       if(Sb) {
         if(!D)
           throw "bind error '" + X + "'";
@@ -465,79 +478,124 @@ export default function Wps(): void {
     return X;
   }
   // debugging
-  def("=", function() {var X = Os.pop(); alert(X);}); // TODO
-  def("==", function() {alert(Os.pop());}); // TODO
-  def("stack", function() {alert(Os);}); // TODO
-  def("pstack", function() {alert(Os);}); // TODO
+  def("=", function() {var X = this.Os.pop(); alert(X);}); // TODO
+  def("==", function() {console.log(this.Os.pop());}); // TODO
+  def("stack", function() {console.log(this.Os);}); // TODO
+  def("pstack", function() {console.log(this.Os);}); // TODO
+  def("wtf", function() {console.log(this.Os.length);}); // FIXME remove
   // js ffi
   def(".call", function() {
-    var N = Os.pop();
-    var K = Os.pop();
-    var D = Os.pop();
+    var N = this.Os.pop();
+    var K = this.Os.pop();
+    var D = this.Os.pop();
     var X = [];
-    for(var I = 0; I < N; I++) X.unshift(Os.pop());
-    Os.push(D[K].apply(D, X));
+    for(var I = 0; I < N; I++) X.unshift(this.Os.pop());
+    this.Os.push(D[K].apply(D, X));
   });
-  def(".math", function() {Os.push(Math);});
-  def(".date", function() {Os.push(new Date());}); // TODO split new and Date
-  def(".window", function() {Os.push(window);});
+  def(".math", function() {this.Os.push(Math);});
+  def(".date", function() {this.Os.push(new Date());}); // TODO split new and Date
+  def(".window", function() {this.Os.push(window);});
   def(".callback", function() { // TODO event arg?
-    var X = Os.pop();
-    Os.push(function() {
+    var X = this.Os.pop();
+    this.Os.push(function() {
               Ps.run(X, true);
-              while(0 < Es.length)
+              while(0 < this.Es.length)
                 Ps.step();
             });
   });
   // html5
   def(".minv", function() { // TODO in ps
-    var M = Os.pop();
+    var M = this.Os.pop();
     var a = M[0]; var b = M[1];
     var d = M[2]; var e = M[3];
     var g = M[4]; var h = M[5];
-    Os.push([e, b, d, a, d*h-e*g, b*g-a*h]);
+    this.Os.push([e, b, d, a, d*h-e*g, b*g-a*h]);
   });
   def(".mmul", function() { // TODO in ps
-    var B = Os.pop();
-    var A = Os.pop();
+    var B = this.Os.pop();
+    var A = this.Os.pop();
     var a = A[0]; var b = A[1];
     var d = A[2]; var e = A[3];
     var g = A[4]; var h = A[5];
     var r = B[0]; var s = B[1];
     var u = B[2]; var v = B[3];
     var x = B[4]; var y = B[5];
-    Os.push([a*r+b*u, a*s+b*v, d*r+e*u, d*s+e*v, g*r+h*u+x, g*s+h*v+y]);
+    this.Os.push([a*r+b*u, a*s+b*v, d*r+e*u, d*s+e*v, g*r+h*u+x, g*s+h*v+y]);
   });
   def(".xy", function() { // TODO in ps
-    var M = Os.pop();
-    var Y = Os.pop();
-    var X = Os.pop();
-    Os.push(M[0] * X + M[2] * Y + M[4]);
-    Os.push(M[1] * X + M[3] * Y + M[5]);
+    var M = this.Os.pop();
+    var Y = this.Os.pop();
+    var X = this.Os.pop();
+    this.Os.push(M[0] * X + M[2] * Y + M[4]);
+    this.Os.push(M[1] * X + M[3] * Y + M[5]);
   });
   // TODO js ffi to manipulate strings so the following can be in ps
   def(".rgb", function() { // TODO in ps
-    var B = Os.pop();
-    var G = Os.pop();
-    var R = Os.pop();
-    Os.push("rgb(" + R + "," + G + "," + B + ")");
+    var B = this.Os.pop();
+    var G = this.Os.pop();
+    var R = this.Os.pop();
+    this.Os.push("rgb(" + R + "," + G + "," + B + ")");
   });
   def(".rgba", function() { // TODO in ps
-    var A = Os.pop();
-    var B = Os.pop();
-    var G = Os.pop();
-    var R = Os.pop();
-    Os.push("rgba(" + R + "," + G + "," + B + "," + A + ")");
+    var A = this.Os.pop();
+    var B = this.Os.pop();
+    var G = this.Os.pop();
+    var R = this.Os.pop();
+    this.Os.push("rgba(" + R + "," + G + "," + B + "," + A + ")");
   });
 
-  function parse() {
+  // NeWS
+  // TODO split out into new file
+  const processes = []; // global process list
+  def("fork", async function() {
+    const fn = this.Os.pop();
+    const ps = Ps.fork();
+    processes.push(ps);
+    await ps.run(fn, true);
+    console.log('done');
+  });
+
+  def("createevent", function() {
+    this.Os.push({});
+    // do we need anything else?
+    console.log('createevent');
+  });
+
+  def("sendevent", function() {
+    const event = this.Os.pop();
+    // FIXME immediate dispatch to all promises
+    console.log(processes.length);
+  });
+
+  def("killprocess", function() {
+    this.Os.pop();
+  });
+
+  // Listener process tools.
+  def("expressinterest", function() {
+    const filter = this.Os.pop();
+    console.log('express', filter);
+  });
+  def("awaitevent", async function() {
+    await new Promise(function(resolve, reject) {
+      
+    });
+  });
+}
+  
+export default function Wps(): void {
+  var Ps = new Ps0();
+  WpsMixin(Ps);
+
+  async function parse() {
     var T = arguments;
     if(T.length)
       for(var I = 0; I < T.length; I++)
         Ps.parse(T[I]);
     else Ps.parse(T);
-    return Os;
+    return this.Os;
   }
   Wps.prototype.parse = parse;
   return this;
 }
+

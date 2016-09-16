@@ -10,10 +10,11 @@ export function run(ps: string) {
 
   const wps = new Wps();
   wps.parse(readFileSync('lib/wps.wps', 'utf8'));
+  wps.parse(readFileSync('lib/news.wps', 'utf8'));
   wps.parse(
-    "save (xsquares) .setGc",
+    "save",
+    "(xsquares) .setGc",
     ps,
     "restore"
   );
-  console.log(canvas.toDataURL());
 }
