@@ -8,7 +8,7 @@ describe.only('Basic interpreter tests', function() {
   it('(hello world) 7', async function() {
     assert.deepEqual(await run('(hello world) 7'), ['hello world', 7]);
   });
-  it('2 3 +', async function() {
-    assert.deepEqual(await run('2 3 +'), [5]);
+  it('2 3 add', async function() {
+    assert.deepEqual(await run('2 3 add'), [5]);
   });
 });

@@ -159,6 +159,7 @@ class Ps0 {
     if(isSymbol(X) && !isQuoted(X)) { // executable name
       var D = inDs(this.Ds, X);
       if(!D) {
+        console.log(this, X);
         throw "bind error '" + X + "'";
       }
       this.Es.push([false, D[X]]);
