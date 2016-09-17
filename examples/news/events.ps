@@ -1,0 +1,23 @@
+3 2 addwr ==
+
+{ % Start defining a listener process.
+    (hello world) ==
+    createevent dup begin
+    /Name /Hello def
+    end expressinterest
+    { awaitevent == } loop
+} fork % Fork the listener process.
+
+createevent dup begin
+    /Name /Hello def
+    /Action /Mumble def
+end sendevent
+
+createevent dup begin
+    /Name /Goodbye def
+    /Action /Mumble def
+end sendevent
+
+% Kill off the listener process --
+% its process object has been on the stack all this time.
+killprocess

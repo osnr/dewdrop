@@ -173,22 +173,22 @@ class Ps0 {
     else this.Os.push(X);
   }
 
-  exec() {
+  async exec() {
     var X = this.Os.pop();
-    this.run(X, false);
+    await this.run(X, false);
   }
 
-  step() {
+  async step() {
     var C = this.Es.pop();
     var L = C.shift(); // TODO use for 'exit'
     var X = C.pop();
     for(var I = 0; I < C.length; I++)
       this.Os.push(C[I]);
-    this.run(X, true);
+    await this.run(X, true);
   }
 
   PsP = new PsParser(this.Ds);
-  parse(L) {
+  async parse(L) {
     this.PsP.init(L);
     while(this.PsP.peek()) {
       var T = this.PsP.token();
@@ -197,9 +197,9 @@ class Ps0 {
         if(this.PsP.D <= 0 || isSymbol(T) &&
            (member(symbolName(T), "[]{}") ||
             "<<" == symbolName(T) || ">>" == symbolName(T))) {
-          this.exec();
+          await this.exec();
           while(0 < this.Es.length)
-            this.step();
+            await this.step();
         }
       }
     }
@@ -453,30 +453,32 @@ function WpsMixin(Ps: Ps0) {
   });
   var Sb = true;
   def(".strictBind", function() {Sb = true === this.Os.pop();});
-  def("bind", function() {this.Os.push(bind(this.Os.pop()));});
-  function bind(X) {
-    if(isSymbol(X) && !isQuoted(X)) {
-      var D = inDs(this.Ds, X);
-      if(Sb) {
-        if(!D)
-          throw "bind error '" + X + "'";
-        return bind(D[X]);
-      } else return !D ? X : bind(D[X]);
-    } else if(isArray(X) && isQuoted(X)) {
-      var N = X.length;
-      var A = [];
-      for(var I = 0; I < N; I++) {
-        var Xi = X[I];
-        var Xb = bind(Xi);
-        if(isArray(Xi))
-          A = A.concat(isQuoted(Xi) ? quote([Xb]) : [Xb]);
-        else
-          A = A.concat(Xb);
+  def("bind", function() {
+    const bind = (X) => {
+      if(isSymbol(X) && !isQuoted(X)) {
+        var D = inDs(this.Ds, X);
+        if(Sb) {
+          if(!D)
+            throw "bind error '" + X + "'";
+          return bind(D[X]);
+        } else return !D ? X : bind(D[X]);
+      } else if(isArray(X) && isQuoted(X)) {
+        var N = X.length;
+        var A = [];
+        for(var I = 0; I < N; I++) {
+          var Xi = X[I];
+          var Xb = bind(Xi);
+          if(isArray(Xi))
+            A = A.concat(isQuoted(Xi) ? quote([Xb]) : [Xb]);
+          else
+            A = A.concat(Xb);
+        }
+        return quote(A);
       }
-      return quote(A);
+      return X;
     }
-    return X;
-  }
+    this.Os.push(bind(this.Os.pop()));
+  });
   // debugging
   def("=", function() {var X = this.Os.pop(); alert(X);}); // TODO
   def("==", function() {console.log(this.Os.pop());}); // TODO
@@ -498,10 +500,10 @@ function WpsMixin(Ps: Ps0) {
   def(".callback", function() { // TODO event arg?
     var X = this.Os.pop();
     this.Os.push(function() {
-              Ps.run(X, true);
-              while(0 < this.Es.length)
-                Ps.step();
-            });
+      Ps.run(X, true);
+      while(0 < this.Es.length)
+        Ps.step();
+    });
   });
   // html5
   def(".minv", function() { // TODO in ps
@@ -591,9 +593,9 @@ export default function Wps(): void {
     var T = arguments;
     if(T.length)
       for(var I = 0; I < T.length; I++)
-        Ps.parse(T[I]);
-    else Ps.parse(T);
-    return this.Os;
+        await Ps.parse(T[I]);
+    else await Ps.parse(T);
+    return Ps.Os;
   }
   Wps.prototype.parse = parse;
   return this;

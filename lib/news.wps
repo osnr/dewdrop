@@ -1,0 +1,17 @@
+/newcanvas{pop 1000 dict}.bdef
+/reshapecanvas{pop}.bdef
+/setcanvas{pop}.bdef
+
+/erasepage{}.bdef
+
+/framebuffer{(PLACEHOLDER)}.bdef
+
+% processes
+% 
+% /fork{0 .setTimeout}.bdef
+%
+%/createevent{100 dict}.bdef
+%/expressinterest{pop}.bdef
+%/awaitevent{}.bdef % FIXME Implement in JS.
+%/sendevent{}.bdef
+%/killprocess{}.bdef
