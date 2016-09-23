@@ -34,35 +34,41 @@ function member(C, L) {
   return 0 <= L.indexOf(C);
 }
 
-function PsParser(Ds): void {
-  var Self = this;
-  function init(L) {
-    Self.L = L;
-    Self.N = L.length;
-    Self.I = 0;
-    Self.D = 0;
+class PsParser {
+  constructor(public Ds: any[]) {}
+
+  L: any;
+  N: number;
+  I: number;
+  D: number;
+  init(L: any) {
+    this.L = L;
+    this.N = L.length;
+    this.I = 0;
+    this.D = 0;
   }
-  function peek() {return Self.I < Self.N && Self.L[Self.I];}
-  function xchar() {return Self.I < Self.N && Self.L[Self.I++];}
-  function skip() { // TODO white space ffeed + null???
-    while(Self.I < Self.N && member(Self.L[Self.I], " \t\n"))
-      Self.I++;
+
+  peek() {return this.I < this.N && this.L[this.I];}
+  xchar() {return this.I < this.N && this.L[this.I++];}
+  skip() { // TODO white space ffeed + null???
+    while(this.I < this.N && member(this.L[this.I], " \t\n"))
+      this.I++;
   }
-  function comment() {
-    while("%" == peek()) {
-      while(peek() && "\n" != peek())
-        xchar();
-      skip();
+  comment() {
+    while("%" == this.peek()) {
+      while(this.peek() && "\n" != this.peek())
+        this.xchar();
+      this.skip();
     }
   }
-  function text() {
+  text() {
     // TODO hex text in <>
     // TODO ASCII base-85 <~ and ~>
-    xchar();
+    this.xchar();
     var L = [];
     var N = 1;
-    while(0 < N && peek()) {
-      var C = xchar();
+    while(0 < N && this.peek()) {
+      var C = this.xchar();
       switch(C) {
         case "(":
           N++;
@@ -72,7 +78,7 @@ function PsParser(Ds): void {
           if(N <= 0) C = false;
           break;
         case "\\":
-          C = xchar();
+          C = this.xchar();
           switch(C) {
             case "(": break;
             case ")": break;
@@ -90,17 +96,17 @@ function PsParser(Ds): void {
     }
     return L.join("");
   }
-  function symbol() {
+  symbol() {
     // TODO 1e10 1E-5 real numbers
     // TODO radix numbers 8#1777 16#FFFE 2#1000
     // TODO if preceeded with / then cannot be number
-    var C = xchar();
+    var C = this.xchar();
     if(member(C, "()<>/% \t\n")) throw "Symbol expected, got " + C;
     var N = member(C, "+-0123456789.");
     var F = "." == C;
     var L: any = [C];
-    while(peek() && !member(peek(), "()<>[]{}/% \t\n")) {
-      C = xchar();
+    while(this.peek() && !member(this.peek(), "()<>[]{}/% \t\n")) {
+      C = this.xchar();
       L.push(C);
       if(N && !member(C, "0123456789")) {
         if(!F && "." == C) F = true;
@@ -111,67 +117,71 @@ function PsParser(Ds): void {
     if(1 == L.length && member(L, "+-.")) N = false;
     return N ? (F ? parseFloat(L) : parseInt(L, 10)) : new Symbol(L);
   }
-  function token() {
-    skip();
-    switch(peek()) { // TODO read dict in <> <~~>
+  token() {
+    this.skip();
+    switch(this.peek()) { // TODO read dict in <> <~~>
       case false: return undefined;
-      case "%": return comment();
-      case "[": return new Symbol(xchar());
-      case "]": return new Symbol(xchar());
-      case "{": Self.D++; return new Symbol(xchar());
-      case "}": Self.D--; return new Symbol(xchar());
+      case "%": return this.comment();
+      case "[": return new Symbol(this.xchar());
+      case "]": return new Symbol(this.xchar());
+      case "{": this.D++; return new Symbol(this.xchar());
+      case "}": this.D--; return new Symbol(this.xchar());
       case "/":
-        xchar();
-        if("/" == peek()) {
-            xchar();
-            var X = symbol();
-            return inDs(Ds, X);
+        this.xchar();
+        if("/" == this.peek()) {
+            this.xchar();
+            var X = this.symbol();
+            return inDs(this.Ds, X);
         } else {
-            var X = symbol();
+            var X = this.symbol();
             return quote(X);
         }
-      case "(": return text();
+      case "(": return this.text();
       case "<":
-        xchar();
-        if("<" != peek()) throw "Encoded strings not implemented yet";
-        xchar();
+        this.xchar();
+        if("<" != this.peek()) throw "Encoded strings not implemented yet";
+        this.xchar();
         return new Symbol("<<");
       case ">":
-        xchar();
-        if(">" != peek()) throw "Unexpected >";
-        xchar();
+        this.xchar();
+        if(">" != this.peek()) throw "Unexpected >";
+        this.xchar();
         return new Symbol(">>");
-      default: return symbol();
+      default: return this.symbol();
     }
   }
-  PsParser.prototype.init = init;
-  PsParser.prototype.peek = peek;
-  PsParser.prototype.token = token;
-  return this;
 }
 
+// Context for a coroutine.
 class Ps0 {
+  PsP: PsParser;
   constructor(public Os = [], public Ds = [], public Es = []) {
     console.log('new Ps0', Os.length, Ds.length, Es.length);
+    this.PsP = new PsParser(this.Ds);
   }
 
   async run(X, Z) {
-    if(isSymbol(X) && !isQuoted(X)) { // executable name
+    if (isSymbol(X) && !isQuoted(X)) { // executable name
       var D = inDs(this.Ds, X);
       if(!D) {
-        console.log(this, X);
-        throw "bind error '" + X + "'";
+        throw new Error("bind error '" + X + "'");
       }
       this.Es.push([false, D[X]]);
-    } else if(Z && isArray(X) && isQuoted(X)) { // proc from Es
+
+    } else if (Z && isArray(X) && isQuoted(X)) { // proc from Es
       if(0 < X.length) {
         var F = X[0];
         var R = quote(X.slice(1));
         if(0 < R.length) this.Es.push([false, R]);
         await this.run(F, false);
       }
-    } else if("function" == typeof X) await X.call(this); // operator
-    else this.Os.push(X);
+
+    } else if ("function" == typeof X) { // operator
+      await X.call(this);
+
+    } else {
+      this.Os.push(X);
+    }
   }
 
   async exec() {
@@ -188,7 +198,6 @@ class Ps0 {
     await this.run(X, true);
   }
 
-  PsP = new PsParser(this.Ds);
   async parse(L) {
     this.PsP.init(L);
     while(this.PsP.peek()) {
@@ -550,12 +559,18 @@ function WpsMixin(Ps: Ps0) {
   // NeWS
   // TODO split out into new file
   const processes = []; // global process list
-  def("fork", async function() {
+  def("fork", function() {
     const fn = this.Os.pop();
     const ps = Ps.fork();
-    processes.push(ps);
-    await ps.run(fn, true);
-    console.log('done');
+    const proc = {
+      promise: (async function() {
+        await ps.run(fn, true);
+        while(0 < ps.Es.length)
+          await ps.step();
+      })(),
+      ps
+    };
+    this.Os.push(proc);
   });
 
   def("createevent", function() {
@@ -570,6 +585,11 @@ function WpsMixin(Ps: Ps0) {
     console.log(processes.length);
   });
 
+  def("waitprocess", async function() {
+    const proc = this.Os.pop();
+    await proc.promise;
+    this.Os.push(proc.ps.Os.pop());
+  });
   def("killprocess", function() {
     this.Os.pop();
   });
@@ -579,26 +599,27 @@ function WpsMixin(Ps: Ps0) {
     const filter = this.Os.pop();
     console.log('express', filter);
   });
-  def("awaitevent", async function() {
-    await new Promise(function(resolve, reject) {
+  def("awaitevent", function() {
+    new Promise(function(resolve, reject) {
       
     });
   });
 }
   
-export default function Wps(): void {
-  var Ps = new Ps0();
-  WpsMixin(Ps);
+export default class Wps {
+  Ps: Ps0;
+  constructor() {
+    this.Ps = new Ps0();
+    WpsMixin(this.Ps);
+  }
 
-  async function parse() {
+  async parse() {
     var T = arguments;
     if(T.length)
       for(var I = 0; I < T.length; I++)
-        await Ps.parse(T[I]);
-    else await Ps.parse(T);
-    return Ps.Os;
+        await this.Ps.parse(T[I]);
+    else await this.Ps.parse(T);
+    return this.Ps.Os;
   }
-  Wps.prototype.parse = parse;
-  return this;
 }
 

@@ -1,7 +1,4 @@
-3 2 addwr ==
-
 { % Start defining a listener process.
-    (hello world) ==
     createevent dup begin
     /Name /Hello def
     end expressinterest
@@ -11,7 +8,7 @@
 createevent dup begin
     /Name /Hello def
     /Action /Mumble def
-end sendevent
+end sendevent % Send the /Hello event. The listener process will wake up and print it.
 
 createevent dup begin
     /Name /Goodbye def
