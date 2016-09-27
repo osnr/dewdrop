@@ -288,7 +288,6 @@ initmatrix
 /scalefont{pop}.bdef % TODO
 /setfont{pop}.bdef % TODO C.font = N + "pt " + F.V;
 /stopped{}.bdef % TODO
-/loop{}.bdef % TODO !!!
 /string{}.bdef % TODO
 /pathbbox{}.bdef % TODO
 /urx{}.bdef % TODO

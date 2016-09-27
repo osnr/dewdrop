@@ -19,8 +19,8 @@ describe('Examples', function() {
   describe('from NeWS', function() {
     const files = readdirSync('examples/news');
     files.forEach(function(file) {
-      it(file, function() {
-        runNews(readFileSync('examples/news/' + file, 'utf8'));
+      it(file, async function() {
+        await runNews(readFileSync('examples/news/' + file, 'utf8'));
       });
       // for reference -- how it's used on http://logand.com/sw/wps:
 

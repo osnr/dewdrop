@@ -25,15 +25,15 @@ export function runGraphical(ps: string) {
   );
 }
 
-export function runNews(ps: string) {
+export async function runNews(ps: string) {
   const canvas = new Canvas(200, 200);
   (global as any).window = global;
   (global as any).document = { getElementById: () => canvas };
 
   const wps = new Wps();
-  wps.parse(readFileSync('lib/wps.wps', 'utf8'));
-  wps.parse(readFileSync('lib/news.wps', 'utf8'));
-  return wps.parse(
+  await wps.parse(readFileSync('lib/wps.wps', 'utf8'));
+  await wps.parse(readFileSync('lib/news.wps', 'utf8'));
+  return await wps.parse(
     "save",
     "(xsquares) .setGc",
     ps,

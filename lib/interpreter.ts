@@ -152,7 +152,7 @@ class PsParser {
   }
 }
 
-// Context for a coroutine.
+// PostScript context for a single coroutine.
 class Ps0 {
   PsP: PsParser;
   constructor(public Os = [], public Ds = [], public Es = []) {
@@ -200,9 +200,9 @@ class Ps0 {
 
   async parse(L) {
     this.PsP.init(L);
-    while(this.PsP.peek()) {
+    while (this.PsP.peek()) {
       var T = this.PsP.token();
-      if(T || T === 0) {
+      if (T || T === 0) {
         this.Os.push(T);
         if(this.PsP.D <= 0 || isSymbol(T) &&
            (member(symbolName(T), "[]{}") ||
@@ -216,8 +216,40 @@ class Ps0 {
     return this.Os;
   }
 
-  fork() {
-    return new Ps0(this.Os.slice(0), this.Ds.slice(0), []);
+  static suspended = new Set();
+
+  static nextIdx = 0;
+  idx = Ps0.nextIdx++;
+
+  awaitingEvent = false;
+  continuation: Function;
+
+  async suspendFor(next: Ps0) {
+    console.log('suspendFor', this.idx, next.idx);
+    Ps0.suspended.add(this);
+    await new Promise((resolve) => {
+      this.continuation = resolve;
+      next.continuation();
+    });
+    Ps0.suspended.delete(this);
+    this.continuation = null;
+  }
+
+  async awaitEvent() {
+    // Kind of like suspendFor except it yields without a known yieldee
+    // and shouldn't be woken up unless a matching event pops up.
+    this.awaitingEvent = true;
+    await this.suspendFor(Ps0.suspended.values().next().value);
+  }
+
+  async fork(fn: Function) {
+    const child = new Ps0(this.Os.slice(0), this.Ds.slice(0), []);
+    child.continuation = async function() {
+      await child.run(fn, true);
+      while (0 < child.Es.length)
+        await child.step();
+    };
+    await this.suspendFor(child);
   }
 }
 
@@ -337,6 +369,17 @@ function WpsMixin(Ps: Ps0) {
     } else {
       if(J + K <= L) this.Es.push([true, J + K, K, L, B, Xfor]);
       if(J <= L) this.Es.push([false, J, B]);
+    }
+  });
+  def("loop", async function Xloop() {
+    console.log('loop');
+    const fn = this.Os.pop();
+    while (true) {
+      console.log('iter');
+      await this.run(fn, true);
+      while (0 < this.Es.length) {
+        await this.step();
+      }
     }
   });
   function XforallA() {
@@ -557,20 +600,9 @@ function WpsMixin(Ps: Ps0) {
   });
 
   // NeWS
-  // TODO split out into new file
-  const processes = []; // global process list
-  def("fork", function() {
+  def("fork", async function() {
     const fn = this.Os.pop();
-    const ps = Ps.fork();
-    const proc = {
-      promise: (async function() {
-        await ps.run(fn, true);
-        while(0 < ps.Es.length)
-          await ps.step();
-      })(),
-      ps
-    };
-    this.Os.push(proc);
+    this.Os.push(await Ps.fork(fn));
   });
 
   def("createevent", function() {
@@ -579,33 +611,50 @@ function WpsMixin(Ps: Ps0) {
     console.log('createevent');
   });
 
-  def("sendevent", function() {
+  def("sendevent", async function() {
     const event = this.Os.pop();
-    // FIXME immediate dispatch to all promises
-    console.log(processes.length);
+
+    const fixedSuspended = new Set(Ps0.suspended);
+    for (const proc of fixedSuspended) {
+      if (proc.hasInterestIn(event)) {
+        console.log('interested!', proc.continuation);
+        proc.Os.push(event); // FIXME Kind of a hack.. this maybe should be in awaitevent somehow
+        await this.suspendFor(proc);
+      } else {
+        console.log('not interested :(');
+      }
+    }
+    console.log('sent event');
   });
 
   def("waitprocess", async function() {
     const proc = this.Os.pop();
     await proc.promise;
-    this.Os.push(proc.ps.Os.pop());
+    this.Os.push(proc.Os.pop());
   });
   def("killprocess", function() {
-    this.Os.pop();
+    console.log('killprocess');
+    Ps0.suspended.delete(this.Os.pop());
   });
 
   // Listener process tools.
   def("expressinterest", function() {
     const filter = this.Os.pop();
-    console.log('express', filter);
+    this.hasInterestIn = (event) => {
+      for (const key in filter) {
+        if (filter[key].nm !== event[key].nm) return false;
+      }
+      return true;
+    };
+    console.log('expressed interest via expressinterest');
   });
-  def("awaitevent", function() {
-    new Promise(function(resolve, reject) {
-      
-    });
+
+  def("awaitevent", async function() {
+    console.log('awaitevent');
+    await this.awaitEvent();
   });
 }
-  
+
 export default class Wps {
   Ps: Ps0;
   constructor() {
@@ -613,7 +662,7 @@ export default class Wps {
     WpsMixin(this.Ps);
   }
 
-  async parse() {
+  async parse(...args: any[]) { // FIXME placeholder type sig
     var T = arguments;
     if(T.length)
       for(var I = 0; I < T.length; I++)

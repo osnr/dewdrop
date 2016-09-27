@@ -2,7 +2,7 @@
     createevent dup begin
     /Name /Hello def
     end expressinterest
-    { awaitevent == } loop
+    { (awaiting) == awaitevent (awaited) == == } loop
 } fork % Fork the listener process.
 
 createevent dup begin

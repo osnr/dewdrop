@@ -17,4 +17,23 @@ describe('Basic interpreter tests', function() {
   it('has fork actually do something', async function() {
     assert.deepEqual(await run('{4 3 add} fork waitprocess'), [7]);
   });
+  it('awaits event', async function() {
+    assert.deepEqual(await run(`
+{
+    createevent dup begin
+    /Name /Hello def
+    end expressinterest
+    { awaitevent == } loop
+} fork
+
+(returned to orig) ==
+
+createevent dup begin
+    /Name /Hello def
+    /Action /Mumble def
+end sendevent
+
+killprocess
+`), []);
+  });
 });
