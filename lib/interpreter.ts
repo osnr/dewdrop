@@ -233,13 +233,18 @@ class Ps0 {
     });
     Ps0.suspended.delete(this);
     this.continuation = null;
+    console.log('awoke', this.idx);
+  }
+
+  async suspendForNext() {
+    await this.suspendFor(Ps0.suspended.values().next().value);
   }
 
   async awaitEvent() {
     // Kind of like suspendFor except it yields without a known yieldee
     // and shouldn't be woken up unless a matching event pops up.
     this.awaitingEvent = true;
-    await this.suspendFor(Ps0.suspended.values().next().value);
+    await this.suspendForNext();
   }
 
   async fork(fn: Function) {
@@ -248,8 +253,11 @@ class Ps0 {
       await child.run(fn, true);
       while (0 < child.Es.length)
         await child.step();
+      // Child process is done now.
+      Ps0.suspended.values().next().value.continuation();
     };
     await this.suspendFor(child);
+    return child;
   }
 }
 
@@ -629,7 +637,12 @@ function WpsMixin(Ps: Ps0) {
 
   def("waitprocess", async function() {
     const proc = this.Os.pop();
-    await proc.promise;
+    console.log('will await proc', proc.idx);
+    while (Ps0.suspended.has(proc)) {
+      console.log('awaiting: suspended has proc');
+      await this.suspendFor(proc);
+      console.log('returned from suspension');
+    }
     this.Os.push(proc.Os.pop());
   });
   def("killprocess", function() {
