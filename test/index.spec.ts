@@ -26,8 +26,6 @@ describe('Basic interpreter tests', function() {
     { awaitevent == } loop
 } fork
 
-(returned to orig) ==
-
 createevent dup begin
     /Name /Hello def
     /Action /Mumble def

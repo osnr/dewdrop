@@ -4,6 +4,7 @@ import { readFileSync } from 'fs'; // FIXME
 const Canvas = require('canvas'); // FIXME
 
 export async function run(ps: string) {
+  // Used for basic stack tests.
   const wps = new Wps();
   await wps.parse(readFileSync('lib/wps.wps', 'utf8'));
   await wps.parse(readFileSync('lib/news.wps', 'utf8'));
