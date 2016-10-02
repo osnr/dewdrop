@@ -91,7 +91,7 @@ systemdict/def{currentdict 2 index 2 index put pop pop}put
 %% canvas
 
 /.setGc{.getElementById (2d)exch (getContext)1 .call /.$gc .xdef}.bdef
-/.gc{/.$gc load}.bdef
+/.gc{/.$gc load}.bdef % indirection so .gc is always whatever current gc is
 /.gget{.gc exch get}.bdef
 /.gput{.gc 3 1 roll exch put}.bdef
 /.gcall0{.gc 3 1 roll .call pop}.bdef

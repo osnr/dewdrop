@@ -204,10 +204,10 @@ export function StdlibMixin(Ps: Ps0) {
   def("where", function() {
     var K = this.Os.pop();
     var D = inDs(this.Ds, K);
-	if(D) {
-	  this.Os.push(D);
-	  this.Os.push(true);
-	} else this.Os.push(false);
+    if(D) {
+      this.Os.push(D);
+      this.Os.push(true);
+    } else this.Os.push(false);
   });
   // miscellaneous
   def("save", function() {

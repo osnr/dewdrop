@@ -7,21 +7,37 @@
 import { Ps0 } from './ps0';
 import { StdlibMixin } from './stdlib';
 import { CoroutineMixin } from './coroutine';
+import { CanvasMixin } from './canvas';
 
-export default class Wps {
+const wpsLib = require('raw!./wps.wps');
+
+interface DewdropInstance {
   Ps: Ps0;
-  constructor() {
-    this.Ps = new Ps0();
-    StdlibMixin(this.Ps);
-    CoroutineMixin(this.Ps);
+  parse: (...args: any[]) => Promise<any>;
+}
+
+export default async function Dewdrop(framebuffer?: HTMLCanvasElement): Promise<DewdropInstance> {
+  const dewdrop = {
+    Ps: new Ps0(),
+    async parse(...args: any[]): Promise<any> { // FIXME placeholder type sig
+      var T = arguments;
+      if(T.length)
+        for(var I = 0; I < T.length; I++)
+          await this.Ps.parse(T[I]);
+      else await this.Ps.parse(T);
+      return this.Ps.Os;
+    }
+  };
+
+  StdlibMixin(dewdrop.Ps);
+  CoroutineMixin(dewdrop.Ps);
+  if (framebuffer) {
+    // 'NeWS mode'
+    CanvasMixin(framebuffer.getContext('2d'), dewdrop.Ps);
   }
 
-  async parse(...args: any[]) { // FIXME placeholder type sig
-    var T = arguments;
-    if(T.length)
-      for(var I = 0; I < T.length; I++)
-        await this.Ps.parse(T[I]);
-    else await this.Ps.parse(T);
-    return this.Ps.Os;
-  }
+  // FIXME: Ugh, parse is technically async.
+  await dewdrop.parse(wpsLib);
+
+  return dewdrop;
 }

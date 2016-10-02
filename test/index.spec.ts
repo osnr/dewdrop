@@ -27,7 +27,7 @@ describe('Basic interpreter tests', function() {
 } fork
 
 createevent dup begin
-    /Name /Hello def
+    /Name /Hello def 
     /Action /Mumble def
 end sendevent
 

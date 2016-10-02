@@ -8,6 +8,8 @@
     "test": "test"
   },
   "scripts": {
+    "build": "webpack",
+    "start": "webpack-dev-server",
     "test": "mocha --compilers ts:ts-node/register,tsx:ts-node/register test"
   },
   "repository": {
@@ -22,7 +24,11 @@
   "homepage": "https://github.com/osnr/dewdrop#readme",
   "devDependencies": {
     "canvas": "^1.4.0",
-    "mocha": "^3.0.2"
+    "mocha": "^3.0.2",
+    "raw-loader": "^0.5.1",
+    "ts-loader": "^0.8.2",
+    "webpack": "^1.13.2",
+    "webpack-dev-server": "^1.16.1"
   },
   "dependencies": {}
 }
