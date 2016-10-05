@@ -136,6 +136,14 @@ class DewdropCanvas {
     }
 
     this.buffer = document.createElement('canvas');
+
+    // Hacks for negative space.
+    this.buffer.width = 2048;
+    this.buffer.height = 2048;
+    // Do before tracking transforms. Permanent transform.
+    // Keeps negative coordinates usable.
+    this.buffer.getContext('2d').translate(1024, 1024);
+
     this.bufferCtx = wrap(this.buffer.getContext('2d'));
   }
 
@@ -159,7 +167,8 @@ class DewdropCanvas {
       this.deviceCtx.clip(this.shape);
     }
 
-    this.deviceCtx.drawImage(this.buffer, 0, 0);
+    // Adjust for permanent transform. Keeps negative coordinates usable.
+    this.deviceCtx.drawImage(this.buffer, -1024, -1024);
 
     this.children.forEach(child => child.paint());
 
