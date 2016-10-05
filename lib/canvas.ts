@@ -1,6 +1,8 @@
 import { Ps0 } from './ps0';
 import { Symbol } from './util';
 
+import { augmentContext } from './context-transform';
+
 export function CanvasMixin(deviceCtx: CanvasRenderingContext2D, Ps: Ps0) {
   var Sd = {};
   Ps.Ds.push(Sd);
@@ -33,7 +35,10 @@ export function CanvasMixin(deviceCtx: CanvasRenderingContext2D, Ps: Ps0) {
   setCanvas(framebuffer);
 
   def('erasepage', function() {
-
+    currentCanvas.bufferCtx.save();
+    currentCanvas.bufferCtx.fillStyle = 'white';
+    currentCanvas.bufferCtx.fill(currentCanvas.shape);
+    currentCanvas.bufferCtx.restore();
   });
 
   function setupAnimation() {
@@ -42,6 +47,7 @@ export function CanvasMixin(deviceCtx: CanvasRenderingContext2D, Ps: Ps0) {
       setupAnimation();
     });
   }
+  setupAnimation();
 }
 
 // A Dewdrop 'server'. Occupies a single HTML5 canvas.
@@ -55,7 +61,10 @@ export class Dewdrop {
 // Then on each paint, we walk the tree of Dewdrop canvases and paint
 // all of them onto the real graphics context.
 
-type DewdropRenderingContext = CanvasRenderingContext2D & { currentPath: any };
+type DewdropRenderingContext = CanvasRenderingContext2D & {
+  currentPath: any;
+  currentTransform: any;
+};
 
 // Just like an ordinary canvas rendering context, except
 // it remembers the current clip path.
@@ -64,25 +73,36 @@ type DewdropRenderingContext = CanvasRenderingContext2D & { currentPath: any };
 // 2. I need to be able to clip window content according to window shape
 // when it gets painted on a larger canvas.
 function wrap(ctx: CanvasRenderingContext2D): DewdropRenderingContext {
-  const wrapper: DewdropRenderingContext = Object.create(ctx, {
-    currentPath: { writable: true, configurable: true, value: null }
-  });
+  console.log('wrap');
+
+  augmentContext(ctx);
+
+  const wrapper: DewdropRenderingContext = ctx as any;
 
   // Path methods.
-  wrapper.currentPath = null;
   wrapper.beginPath = function() {
     wrapper.currentPath = new Path2D();
     // hack. see if this works...
-    Object.keys(wrapper.currentPath).forEach(key => wrapper[key] = wrapper.currentPath[key]);
+    for (const key in wrapper.currentPath) {
+      wrapper[key] = function() {
+        console.log('path2d', key, arguments);
+        wrapper.currentPath[key].apply(wrapper.currentPath, arguments);
+      }
+    }
   };
+  wrapper.beginPath();
 
   // Drawing paths.
   // Need to intercept anything that finishes off a path.
-  wrapper.fill = function() {
-    ctx.fill(wrapper.currentPath);
+  const originalFill = ctx.fill;
+  wrapper.fill = function(path?: any) {
+    console.log('fill');
+    originalFill.call(ctx, path || wrapper.currentPath);
   };
-  wrapper.stroke = function() {
-    ctx.stroke(wrapper.currentPath);
+  const originalStroke = ctx.stroke;
+  wrapper.stroke = function(path?: any) {
+    console.log('stroke');
+    originalStroke.call(ctx, path || wrapper.currentPath);
   };
 
   return wrapper;
@@ -103,11 +123,12 @@ class DewdropCanvas {
   transformMatrix: SVGMatrix;
 
   parent: DewdropCanvas;
-  children: DewdropCanvas[];
+  children: DewdropCanvas[] = [];
 
   constructor(parentOrDevice: DewdropCanvas | CanvasRenderingContext2D) {
     if (parentOrDevice instanceof DewdropCanvas) {
       this.parent = parentOrDevice;
+      this.parent.children.push(this);
       this.deviceCtx = this.parent.deviceCtx;
 
     } else {
@@ -124,14 +145,20 @@ class DewdropCanvas {
   //    default transformation matrix from the current transformation matrix.
   reshape(shape: Path2D, transformMatrix: SVGMatrix) {
     this.shape = shape;
+    console.log(transformMatrix);
     this.transformMatrix = transformMatrix;
   }
 
   paint() {
     this.deviceCtx.save();
 
-    this.deviceCtx.currentTransform = this.transformMatrix;
-    this.deviceCtx.clip(this.shape);
+    if (this.transformMatrix) {
+      this.deviceCtx.setTransform.apply(this.deviceCtx, this.transformMatrix);
+    }
+    if (this.shape) {
+      this.deviceCtx.clip(this.shape);
+    }
+
     this.deviceCtx.drawImage(this.buffer, 0, 0);
 
     this.children.forEach(child => child.paint());

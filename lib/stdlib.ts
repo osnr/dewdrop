@@ -289,6 +289,7 @@ export function StdlibMixin(Ps: Ps0) {
     var D = this.Os.pop();
     var X = [];
     for(var I = 0; I < N; I++) X.unshift(this.Os.pop());
+    // debugger;
     this.Os.push(D[K].apply(D, X));
   });
   def(".math", function() {this.Os.push(Math);});

@@ -1,8 +1,10 @@
 import { runDewdrop } from '../lib/index';
 
-const framebuffer = document.getElementById('framebuffer');
+const framebuffer = document.getElementById('framebuffer') as HTMLCanvasElement;
+framebuffer.getContext('2d').fillStyle = 'gray';
+framebuffer.getContext('2d').fillRect(0, 0, 640, 480);
 
-runDewdrop(framebuffer as HTMLCanvasElement, `
+runDewdrop(framebuffer, `
 /cv framebuffer newcanvas
 def
 framebuffer setcanvas
