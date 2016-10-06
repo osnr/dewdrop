@@ -1,7 +1,7 @@
 import { Ps0 } from './ps0';
 import { Symbol } from './util';
 
-import { augmentContext } from './context-transform';
+import { augmentContext, inverse, applyToPoint } from './context-transform';
 
 export function CanvasMixin(deviceCtx: CanvasRenderingContext2D, Ps: Ps0) {
   var Sd = {};
@@ -148,8 +148,10 @@ class DewdropCanvas {
         e[new Symbol('Canvas')] = this;
         e[new Symbol('Name')] = new Symbol('LeftMouseButton');
         e[new Symbol('Action')] = new Symbol('UpTransition');
-        e[new Symbol('XLocation')] = event.offsetX;
-        e[new Symbol('YLocation')] = event.offsetY;
+        const inv = inverse(this.transformMatrix);
+        const { x, y } = applyToPoint(inv, event.offsetX, event.offsetY);
+        e[new Symbol('XLocation')] = x;
+        e[new Symbol('YLocation')] = y;
         Ps.sendEvent(e);
       }
       this.deviceCtx.restore();

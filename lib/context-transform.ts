@@ -24,9 +24,24 @@ export const transform = function (a, b, c, d, e, f) {
 
 const basicTransforms: any = { translate, rotate, scale, transform };
 
-// Functions that combine transforms.
+const determinant = function (m) {
+  return m[0] * m[3] - m[1] * m[2];
+};
 
-export const multiply = function (m1, m2) {
+// FIXME: Implement basic test for inverse.
+export const inverse = function(m) {
+  const dt = determinant(m);
+  return [
+    m[3] / dt,
+    -m[1] / dt,
+    -m[2] / dt,
+    m[0] / dt,
+    (m[2] * m[5] - m[3] * m[4]) / dt,
+    -(m[0] * m[5] - m[1] * m[4]) /dt
+  ];
+};
+
+export const multiply = function(m1, m2) {
   // Value [a,b,c,d,e,f] represents the 3 by 3 matrix
   // a c e
   // b d f
@@ -39,6 +54,13 @@ export const multiply = function (m1, m2) {
     m1[0] * m2[4] + m1[2] * m2[5] + m1[4],
     m1[1] * m2[4] + m1[3] * m2[5] + m1[5],
   ];
+};
+
+export const applyToPoint = function(m, x, y) {
+  return {
+    x: x * m[0] + y * m[2] + m[4],
+    y: x * m[1] + y * m[3] + m[5]
+  }
 };
 
 // Given the current transformation matrix, a transform to apply to it, and its
