@@ -10,7 +10,7 @@ export function CanvasMixin(deviceCtx: CanvasRenderingContext2D, Ps: Ps0) {
   function def(Nm, Fn) { Sd[new Symbol(Nm)] = Fn; }
 
   // TODO: Move to PostScript.
-  const framebuffer = new DewdropCanvas(deviceCtx);
+  const framebuffer = new DewdropCanvas(Ps, deviceCtx);
   def('framebuffer', function() {
     this.Os.push(framebuffer);
   });
@@ -18,7 +18,7 @@ export function CanvasMixin(deviceCtx: CanvasRenderingContext2D, Ps: Ps0) {
   let currentCanvas: DewdropCanvas;
   def('newcanvas', function() {
     const parent = this.Os.pop();
-    this.Os.push(new DewdropCanvas(parent));
+    this.Os.push(new DewdropCanvas(Ps, parent));
   });
   def('reshapecanvas', function() {
     const cv = this.Os.pop();
@@ -125,7 +125,7 @@ class DewdropCanvas {
   parent: DewdropCanvas;
   children: DewdropCanvas[] = [];
 
-  constructor(parentOrDevice: DewdropCanvas | CanvasRenderingContext2D) {
+  constructor(Ps: Ps0, parentOrDevice: DewdropCanvas | CanvasRenderingContext2D) {
     if (parentOrDevice instanceof DewdropCanvas) {
       this.parent = parentOrDevice;
       this.parent.children.push(this);
@@ -135,6 +135,27 @@ class DewdropCanvas {
       this.deviceCtx = parentOrDevice;
     }
 
+    // Attach events.
+    this.deviceCtx.canvas.addEventListener('mouseup', (event) => {
+      if (!this.shape) return;
+      this.deviceCtx.save();
+      if (this.transformMatrix) {
+        this.deviceCtx.setTransform.apply(this.deviceCtx, this.transformMatrix);
+      }
+      if (this.deviceCtx.isPointInPath(this.shape, event.offsetX, event.offsetY)) {
+        console.log('click on window');
+        const e: any = {};
+        e[new Symbol('Canvas')] = this;
+        e[new Symbol('Name')] = new Symbol('LeftMouseButton');
+        e[new Symbol('Action')] = new Symbol('UpTransition');
+        e[new Symbol('XLocation')] = event.offsetX;
+        e[new Symbol('YLocation')] = event.offsetY;
+        Ps.sendEvent(e);
+      }
+      this.deviceCtx.restore();
+    });
+
+    // Bind buffer to draw on.
     this.buffer = document.createElement('canvas');
 
     // Hacks for negative space.
@@ -170,7 +191,10 @@ class DewdropCanvas {
     // Adjust for permanent transform. Keeps negative coordinates usable.
     this.deviceCtx.drawImage(this.buffer, -1024, -1024);
 
-    this.children.forEach(child => child.paint());
+    this.children.forEach(child => {
+      // FIXME: Check if Mapped or not.
+      child.paint()
+    });
 
     this.deviceCtx.restore();
   }

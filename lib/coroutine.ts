@@ -20,18 +20,7 @@ export function CoroutineMixin(Ps: Ps0) {
 
   def("sendevent", async function() {
     const event = this.Os.pop();
-
-    const fixedSuspended = new Set(Ps0.suspended);
-    for (const proc of fixedSuspended) {
-      if (proc.hasInterestIn(event)) {
-        console.log('interested!', proc.continuation);
-        proc.Os.push(event); // FIXME Kind of a hack.. this maybe should be in awaitevent somehow
-        await this.suspendFor(proc);
-      } else {
-        console.log('not interested :(');
-      }
-    }
-    console.log('sent event');
+    await this.sendEvent(event);
   });
 
   def("waitprocess", async function() {

@@ -221,6 +221,20 @@ export class Ps0 {
     await this.suspendForNext();
   }
 
+  async sendEvent(event: any) {
+    const fixedSuspended = new Set(Ps0.suspended);
+    for (const proc of fixedSuspended) {
+      if (proc.hasInterestIn(event)) {
+        console.log('interested!', proc.continuation);
+        proc.Os.push(event); // FIXME Kind of a hack.. this maybe should be in awaitevent somehow
+        await this.suspendFor(proc);
+      } else {
+        console.log('not interested :(');
+      }
+    }
+    console.log('sent event');
+  }
+
   async fork(fn: Function) {
     const child = new Ps0(this.Os.slice(0), this.Ds.slice(0), []);
     child.continuation = async function() {

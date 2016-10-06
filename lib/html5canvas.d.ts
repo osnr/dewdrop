@@ -19,4 +19,6 @@ declare interface CanvasRenderingContext2D {
 
   fill(path: Path2D);
   stroke(path: Path2D);
+
+  isPointInPath(path: Path2D, x: number, y: number);
 }
