@@ -3,14 +3,15 @@ var path = require('path');
 
 module.exports = {
   entry: {
-    app: './app/app.ts'
+    test: './test/entry.js',
+    executive: './executive/index.ts'
   },
   devtool: 'cheap-module-eval-source-map',
   output: {
-    filename: './dist/bundle.js'
+    filename: './dist/[name].entry.js'
   },
   resolve: {
-    extensions: ['', '.ts']
+    extensions: ['', '.js', '.ts']
   },
   module: {
     loaders: [
@@ -18,7 +19,14 @@ module.exports = {
         test: /\.ts$/,
         exclude: /node_modules/,
         loader: 'ts'
+      },
+      {
+        test: /\.ps$/,
+        loader: 'raw'
       }
     ]
+  },
+  node: {
+    fs: 'empty'
   }
 };
