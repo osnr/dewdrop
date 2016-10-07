@@ -15,6 +15,8 @@ export function CanvasMixin(deviceCtx: CanvasRenderingContext2D, Ps: Ps0) {
     this.Os.push(framebuffer);
   });
 
+  // TODO: is framebuffer-as-default-canvas reasonable/consistent behavior?
+  // It's nice because it lets normal PostScript programs work out of the box.
   let currentCanvas: DewdropCanvas;
   def('newcanvas', function() {
     const parent = this.Os.pop();
@@ -143,7 +145,6 @@ class DewdropCanvas {
         this.deviceCtx.setTransform.apply(this.deviceCtx, this.transformMatrix);
       }
       if (this.deviceCtx.isPointInPath(this.shape, event.offsetX, event.offsetY)) {
-        console.log('click on window');
         const e: any = {};
         e[new Symbol('Canvas')] = this;
         e[new Symbol('Name')] = new Symbol('LeftMouseButton');
@@ -176,7 +177,6 @@ class DewdropCanvas {
   //    default transformation matrix from the current transformation matrix.
   reshape(shape: Path2D, transformMatrix: SVGMatrix) {
     this.shape = shape;
-    console.log(transformMatrix);
     this.transformMatrix = transformMatrix;
   }
 

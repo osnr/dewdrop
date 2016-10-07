@@ -1,7 +1,11 @@
-import { run } from '../lib';
+import Dewdrop from '../lib/index';
 import * as assert from 'assert';
 
 describe('Basic interpreter tests', function() {
+  async function run(ps: string): Promise<any[]> {
+    const dewdrop = await Dewdrop();
+    return await dewdrop.parse(ps);
+  }
   it('14 literal', async function() {
     assert.deepEqual(await run('14'), [14]);
   });

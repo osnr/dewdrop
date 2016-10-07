@@ -97,7 +97,11 @@ systemdict/def{currentdict 2 index 2 index put pop pop}put
 /.gcall0{.gc 3 1 roll .call pop}.bdef
 /.gcall1{.gc 3 1 roll .call}.bdef
 /.gcanvas{(canvas).gget}.bdef
-/.gdim{.gcanvas exch(height)exch put .gcanvas exch(width)exch put}.bdef
+
+% Disabled because messes up translate hack /
+% doesn't make sense with buffered windows.
+%/.gdim{.gcanvas exch(height)exch put .gcanvas exch(width)exch put}.bdef
+/.gdim{pop pop}.bdef
 /.gbox{.gdim pop pop}.bdef % TODO compute properly
 
 /.save{(save)0 .gcall0}.bdef
