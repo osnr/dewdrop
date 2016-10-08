@@ -6,17 +6,17 @@ import * as $ from 'jquery';
 import 'jq-console';
 
 (async function (){
-  const framebuffer = document.getElementById('framebuffer') as HTMLCanvasElement;
+  const framebuffer = $('#framebuffer')[0] as HTMLCanvasElement;
 
-  const con = ($('<div></div>')
+  const con = ($('#console')
     .appendTo(document.body)
     .css({
       width: 500,
       height: 300,
-      position: 'absolute',
+      position: 'relative',
       background: 'whitesmoke'
     }) as any)
-    .jqconsole('Dewdrop executive\n', '> ', '? ', false);
+    .jqconsole('Dewdrop executive\n', '> ', '', false);
 
   const dewdrop = await Dewdrop(framebuffer, function log(arg) {
     con.Write(arg + '\n');

@@ -1,18 +1,152 @@
 <html>
 <head>
-<style>
-  #framebuffer {
-    background: gray;
-  }
-  .jqconsole-cursor {
-    background-color: gray;
-  }
-</style>
+  <style>
+    #framebuffer {
+      background: gray;
+    }
+    .jqconsole-cursor {
+      background-color: gray;
+    }
+  </style>
 </head>
 
 <body>
+
 <canvas id="framebuffer" width="640" height="480"></canvas>
+<div id="console"></div>
+
 <script src="../dist/executive.entry.js"></script>
+
+<h2>Samples</h2>
+
+<h3>Basic computation</h3>
+<pre><code>&gt; 2 3 add ==
+5
+&gt; (hello world) (putting stuff on stack) stack
+hello world,putting stuff on stack
+&gt; exch stack
+putting stuff on stack,hello world
+</code></pre>
+
+<h3>Round window which draws line on each click (from The NeWS Book)</h3>
+<pre><code>/cv framebuffer newcanvas def
+framebuffer setcanvas
+130 130 translate
+0 0 100 0 360 arc
+cv reshapecanvas
+cv /Mapped true put
+cv setcanvas
+erasepage
+{
+  createevent dup begin
+    /Canvas cv def
+    /Name /LeftMouseButton def
+    /Action /UpTransition def
+  end expressinterest
+  {
+    awaitevent begin
+      0 0 moveto
+      XLocation YLocation lineto stroke
+    end
+  } loop
+} fork
+</code></pre>
+
+<h2>References</h2>
+
+<ul>
+  <li><a href="https://en.wikipedia.org/wiki/NeWS">NeWS, Wikipedia</a></li>
+  <li><a href="https://medium.com/@slavapestov/yesterdays-news-c52f2be95205">Yesterday's NeWS, Slava Pestov</a></li>
+  <li><a href="http://bitsavers.trailing-edge.com/pdf/sun/NeWS/The_NeWS_Book_1989.pdf">The NeWS Book (1989)</a></li>
+  <li><a href="http://paulbourke.net/dataformats/postscript/">PostScript Tutorial, Paul Bourke</a></li>
+  <li><a href="http://www.math.ubc.ca/~cass/courses/ps.html">PostScript command summary</a></li>
+</ul>
+
+<h2>About</h2>
+
+<p>
+  Dewdrop is a work-in-progress reimplementation of Sun's
+  <a href="https://en.wikipedia.org/wiki/NeWS">
+    NeWS
+  </a> (Network/extensible Window System) version 1.1,
+  by <a href="http://rsnous.com">Omar Rizwan</a>.
+  Its PostScript interpreter and standard library are based on
+  Tom Hlavaty's <a href="http://logand.com/sw/wps/">WPS</a>.
+</p>
+
+<p>
+  NeWS is a window system and UI/graphics API based on a superset of Adobe's PostScript
+  (a stack-based programming language made for printable graphics). NeWS adds interaction support, a UI
+  toolkit, cooperative multitasking, and OOP on top of Adobe PostScript and its graphics model.
+</p>
+
+<p>
+  NeWS was developed in the 1980s at Sun Microsystems and
+  originally named "SunDew." (Many of the people behind NeWS ended up building Java.)
+  NeWS was ahead of its time -- proponents argue it was technically superior
+  to the X Window System that outcompeted it -- and its design actually resembles that of the
+  modern Web. (will add more here...)
+</p>
+
+<p>
+  In <a href="https://www.reddit.com/r/programming/comments/kssyt/postscript_vs_pdf/c2n00nt">the words of Don Hopkins</a>:
+</p>
+
+<blockquote>
+  NeWS was architecturally similar to what is now called AJAX, except that NeWS:
+  <ul>
+    <li>used PostScript code instead of JavaScript for programming.</li>
+    <li>used PostScript graphics instead of DHTML/CSS for rendering.</li>
+    <li>used PostScript data instead of XML/JSON for data representation.</li>
+  </ul>
+</blockquote>
+
+<h2>Aside</h2>
+
+<p>
+  I'm fascinated by the fact that NeWS got to the same place as the modern Web,
+  but over a very different path (and decades earlier).
+  The argument the NeWS Book makes for the NeWS architecture is basically
+  a *compression* argument.
+</p>
+
+<p>
+  Suppose we have two computers: one is a 'server', where logic runs, and one
+  is a 'client' which sits on our desk. How can we build a window system where
+  a graphical app runs remotely on the server,
+  but we interact with it from our desk?
+</p>
+
+<p>
+  One approach would be to stream full video of the screen from the server to
+  our desk. Steam can do this. But that's bandwidth-intensive and hard to pull off,
+  especially back in the 1980s.
+</p>
+
+<p>
+  Another approach, which is taken (in theory) by the X Window System when you
+  do `ssh -X`, is to come up with a basic set of objects, like buttons and
+  text boxes, and have the server stream a display list of all the objects.
+  If you do this, however, then your objects are frozen in stone and
+  might not be what applications want to use -- what if they want to have a custom UI,
+  or what if your buttons just look ugly? -- and if an application
+  draws its own stuff, you end up streaming that custom stuff pixel by pixel
+  anyway.
+</p>
+
+<p>
+  Wait, why do we need to send flat lists at all, whether of pixels or of higher-level display
+  objects? Our desk has a full-fledged computer on it. Why not send a small *program*
+  from the server to the client, and let that program draw whatever it wants on the client?
+</p>
+
+<p>
+  In fact, Adobe built PostScript to solve a very similar problem:
+  your Mac could send your LaserWriter printer a compact PostScript program describing the pages to print,
+  and the LaserWriter would interpret the program on its own CPU.
+  (A <a href="https://en.wikipedia.org/wiki/LaserWriter#Hardware">faster CPU</a>
+  than the original Mac's CPU, by the way.)
+</p>
 </body>
 
 </html>
