@@ -3,7 +3,7 @@ import { Symbol } from './util';
 
 import { augmentContext, inverse, applyToPoint } from './context-transform';
 
-export function CanvasMixin(deviceCtx: CanvasRenderingContext2D, Ps: Ps0) {
+export function CanvasMixin(Ps: Ps0, deviceCtx: CanvasRenderingContext2D) {
   var Sd = {};
   Ps.Ds.push(Sd);
 
@@ -43,20 +43,12 @@ export function CanvasMixin(deviceCtx: CanvasRenderingContext2D, Ps: Ps0) {
     currentCanvas.bufferCtx.restore();
   });
 
-  function setupAnimation() {
+  (function setupAnimation() {
     window.requestAnimationFrame(function() {
       framebuffer.paint();
       setupAnimation();
     });
-  }
-  setupAnimation();
-}
-
-// A Dewdrop 'server'. Occupies a single HTML5 canvas.
-export class Dewdrop {
-  constructor(context: CanvasRenderingContext2D) {
-    // FIXME fill in the root with gray so canvases stand out
-  }
+  })();
 }
 
 // We keep a number of virtual canvases which are purely in-memory.
@@ -75,8 +67,6 @@ type DewdropRenderingContext = CanvasRenderingContext2D & {
 // 2. I need to be able to clip window content according to window shape
 // when it gets painted on a larger canvas.
 function wrap(ctx: CanvasRenderingContext2D): DewdropRenderingContext {
-  console.log('wrap');
-
   augmentContext(ctx);
 
   const wrapper: DewdropRenderingContext = ctx as any;
@@ -87,7 +77,6 @@ function wrap(ctx: CanvasRenderingContext2D): DewdropRenderingContext {
     // hack. see if this works...
     for (const key in wrapper.currentPath) {
       wrapper[key] = function() {
-        console.log('path2d', key, arguments);
         wrapper.currentPath[key].apply(wrapper.currentPath, arguments);
       }
     }
@@ -98,12 +87,10 @@ function wrap(ctx: CanvasRenderingContext2D): DewdropRenderingContext {
   // Need to intercept anything that finishes off a path.
   const originalFill = ctx.fill;
   wrapper.fill = function(path?: any) {
-    console.log('fill');
     originalFill.call(ctx, path || wrapper.currentPath);
   };
   const originalStroke = ctx.stroke;
   wrapper.stroke = function(path?: any) {
-    console.log('stroke');
     originalStroke.call(ctx, path || wrapper.currentPath);
   };
 

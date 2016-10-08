@@ -16,7 +16,7 @@ interface DewdropInstance {
   parse: (...args: any[]) => Promise<any>;
 }
 
-export default async function Dewdrop(framebuffer?: HTMLCanvasElement): Promise<DewdropInstance> {
+export default async function Dewdrop(framebuffer?: HTMLCanvasElement, log?: Function): Promise<DewdropInstance> {
   const dewdrop = {
     Ps: new Ps0(),
     async parse(...args: any[]): Promise<any> { // FIXME placeholder type sig
@@ -29,12 +29,12 @@ export default async function Dewdrop(framebuffer?: HTMLCanvasElement): Promise<
     }
   };
 
-  StdlibMixin(dewdrop.Ps);
+  StdlibMixin(dewdrop.Ps, log);
   CoroutineMixin(dewdrop.Ps);
   if (framebuffer) {
     // 'NeWS mode'
     // TODO: Have a getElementById-based option.
-    CanvasMixin(framebuffer.getContext('2d'), dewdrop.Ps);
+    CanvasMixin(dewdrop.Ps, framebuffer.getContext('2d'));
   }
 
   await dewdrop.parse(wpsLib);

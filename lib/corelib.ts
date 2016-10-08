@@ -1,7 +1,7 @@
 import { Ps0 } from './ps0';
 import { Symbol, quote, unquote, inDs, isSymbol, isArray, isObject, isQuoted } from './util';
 
-export function StdlibMixin(Ps: Ps0) {
+export function StdlibMixin(Ps: Ps0, log: Function = console.log.bind(console)) {
   var Sd = {};
   Ps.Ds.push(Sd);
 
@@ -116,10 +116,8 @@ export function StdlibMixin(Ps: Ps0) {
     }
   });
   def("loop", async function Xloop() {
-    console.log('loop');
     const fn = this.Os.pop();
     while (true) {
-      console.log('iter');
       await this.run(fn, true);
       while (0 < this.Es.length) {
         await this.step();
@@ -278,10 +276,10 @@ export function StdlibMixin(Ps: Ps0) {
   });
   // debugging
   def("=", function() {var X = this.Os.pop(); alert(X);}); // TODO
-  def("==", function() {console.log(this.Os.pop());}); // TODO
-  def("stack", function() {console.log(this.Os);}); // TODO
-  def("pstack", function() {console.log(this.Os);}); // TODO
-  def("wtf", function() {console.log(this.Os.length);}); // FIXME remove
+  def("==", function() {log(this.Os.pop());}); // TODO
+  def("stack", function() {log(this.Os);}); // TODO
+  def("pstack", function() {log(this.Os);}); // TODO
+  def("wtf", function() {log(this.Os.length);}); // FIXME remove
   // js ffi
   def(".call", function() {
     var N = this.Os.pop();
