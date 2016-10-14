@@ -5,5 +5,6 @@
     "jquery": "registry:dt/jquery#1.10.0+20160929162922",
     "mocha": "registry:dt/mocha#2.2.5+20160720003353",
     "node": "registry:dt/node#6.0.0+20160826120425"
-  }
+  },
+  "globalDependencies": {}
 }

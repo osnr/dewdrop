@@ -222,7 +222,10 @@ export class Ps0 {
   }
 
   async sendEvent(event: any) {
-    const fixedSuspended = new Set(Ps0.suspended);
+    // Convert to array so we can compile the loop to ES5,
+    // and so that the suspended-list doesn't change while
+    // we're iterating through it.
+    const fixedSuspended = Array.from(Ps0.suspended);
     for (const proc of fixedSuspended) {
       if (proc.hasInterestIn(event)) {
         proc.Os.push(event); // FIXME Kind of a hack.. this maybe should be in awaitevent somehow

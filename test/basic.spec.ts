@@ -2,6 +2,8 @@ import Dewdrop from '../lib/index';
 import * as assert from 'assert';
 
 describe('Basic interpreter tests', function() {
+  this.timeout(5000);
+
   async function run(ps: string): Promise<any[]> {
     const dewdrop = await Dewdrop();
     return await dewdrop.parse(ps);

@@ -20,11 +20,10 @@ export default async function Dewdrop(framebuffer?: HTMLCanvasElement, log?: Fun
   const dewdrop = {
     Ps: new Ps0(),
     async parse(...args: any[]): Promise<any> { // FIXME placeholder type sig
-      var T = arguments;
-      if(T.length)
-        for(var I = 0; I < T.length; I++)
-          await this.Ps.parse(T[I]);
-      else await this.Ps.parse(T);
+      if(args.length)
+        for(var I = 0; I < args.length; I++)
+          await this.Ps.parse(args[I]);
+      else await this.Ps.parse(args);
       return this.Ps.Os;
     }
   };

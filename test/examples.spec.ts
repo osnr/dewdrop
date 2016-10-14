@@ -3,6 +3,8 @@ import Dewdrop from '../lib/index';
 declare var require: any;
 
 describe('Examples', function() {
+  this.timeout(5000);
+
   function runExamples(req: any) {
     req.keys().forEach(runExample.bind(this, req));
   }

@@ -5,7 +5,7 @@ import * as $ from 'jquery';
 
 import 'jq-console';
 
-(async function (){
+(async function() {
   const framebuffer = $('#framebuffer')[0] as HTMLCanvasElement;
 
   const con = ($('#console')
