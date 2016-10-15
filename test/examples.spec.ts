@@ -3,14 +3,12 @@ import Dewdrop from '../lib/index';
 declare var require: any;
 
 describe('Examples', function() {
-  this.timeout(50000);
+  this.timeout(10000);
 
   function runExamples(req: any) {
     req.keys().forEach(runExample.bind(this, req));
   }
   function runExample(req: any, examplePath: string) {
-    if (examplePath !== './p106.ps') return;
-
     const example = req(examplePath);
     it(examplePath, async function() {
       // Hack so graphical output shows inline in test report.
@@ -30,7 +28,7 @@ describe('Examples', function() {
     runExamples(require.context('../examples/wps', true, /\.ps$/));
   });
 
-  describe.only('from NeWS', function() {
+  describe('from NeWS', function() {
     runExamples(require.context('../examples/news', true, /\.ps$/));
   });
 });

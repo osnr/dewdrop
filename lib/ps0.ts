@@ -199,7 +199,7 @@ export class Ps0 {
   continuation: Function;
 
   async suspendFor(next: Ps0) {
-    console.log('suspendFor', this.idx, next.idx);
+    // console.log('suspendFor', this.idx, next.idx);
     this.suspended.add(this);
 
     await new Promise((resolve) => {
