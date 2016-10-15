@@ -1,0 +1,18 @@
+{
+  createevent dup begin
+    /Name /Hello def
+  end expressinterest
+  {
+    awaitevent ==
+    createevent dup begin
+      /Name /Hello def
+      /TimeStamp currenttime 0.2 add def
+    end sendevent
+  } loop
+} fork
+
+createevent dup begin
+  /Name /Hello def
+end sendevent
+
+waitprocess

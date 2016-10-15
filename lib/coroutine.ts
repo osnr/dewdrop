@@ -14,8 +14,7 @@ export function CoroutineMixin(Ps: Ps0) {
 
   def("createevent", function() {
     this.Os.push({});
-    // do we need anything else?
-    console.log('createevent');
+    // TODO: Do we need anything else?
   });
 
   def("sendevent", async function() {
@@ -25,17 +24,20 @@ export function CoroutineMixin(Ps: Ps0) {
 
   def("waitprocess", async function() {
     const proc = this.Os.pop();
-    console.log('will await proc', proc.idx);
-    while (Ps0.suspended.has(proc)) {
-      console.log('awaiting: suspended has proc');
-      await this.suspendFor(proc);
-      console.log('returned from suspension');
+    while (this.suspended.has(proc)) {
+      if (proc.awaitingEvent) {
+        // FIXME: Hack so we don't wind up in a tight loop
+        // w/o being able to yield for event dispatch.
+        await new Promise((resolve) => {
+          setTimeout(() => resolve(), 100);
+        });
+      }
+      await this.suspendForNext();
     }
     this.Os.push(proc.Os.pop());
   });
   def("killprocess", function() {
-    console.log('killprocess');
-    Ps0.suspended.delete(this.Os.pop());
+    this.suspended.delete(this.Os.pop());
   });
 
   // Listener process tools.
@@ -47,11 +49,9 @@ export function CoroutineMixin(Ps: Ps0) {
       }
       return true;
     };
-    console.log('expressed interest via expressinterest');
   });
 
   def("awaitevent", async function() {
-    console.log('awaitevent');
     await this.awaitEvent();
   });
 }

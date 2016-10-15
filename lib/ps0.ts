@@ -190,58 +190,85 @@ export class Ps0 {
     return this.Os;
   }
 
-  static suspended = new Set();
+  suspended = new Set();
+  awaitingEvent = false;
 
   static nextIdx = 0;
   idx = Ps0.nextIdx++;
 
-  awaitingEvent = false;
   continuation: Function;
 
   async suspendFor(next: Ps0) {
     console.log('suspendFor', this.idx, next.idx);
-    Ps0.suspended.add(this);
+    this.suspended.add(this);
+
     await new Promise((resolve) => {
       this.continuation = resolve;
       next.continuation();
+      // Suspended here.
     });
-    Ps0.suspended.delete(this);
+
+    // Just woke back up.
+    this.suspended.delete(this);
     this.continuation = null;
-    console.log('awoke', this.idx);
   }
 
   async suspendForNext() {
-    await this.suspendFor(Ps0.suspended.values().next().value);
+    // Called on generic pause/wait.
+    const suspended = Array.from(this.suspended);
+    for (const proc of suspended) {
+      if (proc.awaitingEvent) continue;
+      // Yield to the first process we can find that's not blocked.
+      await this.suspendFor(proc);
+      return;
+    }
   }
 
   async awaitEvent() {
-    // Kind of like suspendFor except it yields without a known yieldee
-    // and shouldn't be woken up unless a matching event pops up.
     this.awaitingEvent = true;
     await this.suspendForNext();
   }
 
-  async sendEvent(event: any) {
+  async sendEvent(event: any, asyncSend: boolean = false) {
+    if (new Symbol('TimeStamp') in event) {
+      // Note that a future timestamp makes the sendEvent async
+      // (so there's no immediate yield.)
+      const timeStamp = event[new Symbol('TimeStamp')] * 60000;
+      setTimeout(() => {
+        delete event[new Symbol('TimeStamp')]; // FIXME: Do this properly.
+        this.sendEvent(event, true);
+      }, timeStamp - Date.now());
+      return;
+    }
+
     // Convert to array so we can compile the loop to ES5,
     // and so that the suspended-list doesn't change while
     // we're iterating through it.
-    const fixedSuspended = Array.from(Ps0.suspended);
-    for (const proc of fixedSuspended) {
-      if (proc.hasInterestIn(event)) {
-        proc.Os.push(event); // FIXME Kind of a hack.. this maybe should be in awaitevent somehow
-        await this.suspendFor(proc);
+    const suspended = Array.from(this.suspended);
+    for (const proc of suspended) {
+      // If the proc hasn't expressed any interest, assume it's
+      // not interested in anything.
+      if (proc.hasInterestIn && proc.awaitingEvent && proc.hasInterestIn(event)) {
+        // FIXME: Reaches directly into the other process's state.
+        // Kind of a hack.. this maybe should be in awaitevent somehow instead.
+        proc.awaitingEvent = false;
+        proc.Os.push(event);
+        if (!asyncSend) {
+          await this.suspendFor(proc);
+        }
       }
     }
   }
 
   async fork(fn: Function) {
     const child = new Ps0(this.Os.slice(0), this.Ds.slice(0), []);
+    child.suspended = this.suspended; // Should share same coroutine set.
     child.continuation = async function() {
       await child.run(fn, true);
       while (0 < child.Es.length)
         await child.step();
       // Child process is done now.
-      Ps0.suspended.values().next().value.continuation();
+      this.suspended.values().next().value.continuation();
     };
     await this.suspendFor(child);
     return child;

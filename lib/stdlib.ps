@@ -305,6 +305,9 @@ initmatrix
 /usertime{}.bdef % TODO
 /srand{}.bdef % TODO
 
+% Current time in minutes.
+/currenttime{.date(getTime)0 .call 60000 div}.bdef
+
 %% PDF
 
 /w{setlinewidth}.bdef
