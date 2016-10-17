@@ -1,4 +1,6 @@
 import Dewdrop from '../lib/index';
+import { Symbol, quote } from '../lib/util';
+
 import * as assert from 'assert';
 
 describe('Basic interpreter tests', function() {
@@ -40,10 +42,26 @@ end sendevent
 killprocess
 `), []);
   });
-  it('reduces array', async function() {
+  it('executes array inside proc', async function() {
     assert.deepEqual(await run('{[2 3 add]} exec'), [[5]]);
   });
-  // it('append', async function() {
-  //   assert.deepEqual(await run('[] [[1 2 3]] append'), [1, 2, 3]);
-  // });
+  it('append', async function() {
+    assert.deepEqual(await run('[1 2 3] [4 5 6] append'), [[1, 2, 3, 4, 5, 6]]);
+    assert.deepEqual(await run(`
+dictbegin
+  /Name /A def
+  /Foo /Bar def
+dictend
+dictbegin
+  /Name /B def
+  /Baz /Qux def
+dictend
+append
+dup ==
+`), [{
+      [new Symbol('Name')]: quote(new Symbol('B')),
+      [new Symbol('Foo')]: quote(new Symbol('Bar')),
+      [new Symbol('Baz')]: quote(new Symbol('Qux'))
+    }]);
+  });
 });

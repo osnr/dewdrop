@@ -5,11 +5,12 @@
 /// http://www.fsf.org/licensing/licenses/gpl.html
 
 import { Ps0 } from './ps0';
-import { StdlibMixin } from './corelib';
+import { CorelibMixin } from './corelib';
 import { CoroutineMixin } from './coroutine';
 import { CanvasMixin } from './canvas';
 
 const wpsLib = require('./stdlib.ps');
+const oopLib = require('./oop.ps');
 
 interface DewdropInstance {
   Ps: Ps0;
@@ -28,7 +29,7 @@ export default async function Dewdrop(framebuffer?: HTMLCanvasElement, log?: Fun
     }
   };
 
-  StdlibMixin(dewdrop.Ps, log);
+  CorelibMixin(dewdrop.Ps, log);
   CoroutineMixin(dewdrop.Ps);
   if (framebuffer) {
     // 'NeWS mode'
@@ -37,6 +38,9 @@ export default async function Dewdrop(framebuffer?: HTMLCanvasElement, log?: Fun
   }
 
   await dewdrop.parse(wpsLib);
+  if (framebuffer) {
+    await dewdrop.parse(oopLib);
+  }
 
   return dewdrop;
 }

@@ -19,6 +19,7 @@ import 'jq-console';
     .jqconsole('Dewdrop executive\n', '> ', '', false);
 
   const dewdrop = await Dewdrop(framebuffer, function log(arg) {
+    console.log(arg);
     con.Write(arg + '\n');
   });
 

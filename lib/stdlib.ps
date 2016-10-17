@@ -61,7 +61,16 @@ systemdict /def {
 /dictbegin{1000 dict begin}.bdef
 /dictend{currentdict end}.bdef
 /nullarray{0 array}.bdef
-/append{1 index null eq {exch pop []} if {exch (push)1 .call} forall}.bdef
+/append {
+  dup type (arraytype) eq
+  {exch (concat)1 .call}
+  {
+    1000 dict
+    3 1 roll
+    .window(Object)get (assign)3 .call
+  }
+  ifelse
+}.bdef
 
 %% math
 

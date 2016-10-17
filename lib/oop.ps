@@ -1,0 +1,115 @@
+% PostScript OOP implementation. From Densmore (1986):
+%   https://archive.org/details/pdfy-1U9Ry1_Qj0LPSR6e
+
+%
+% Objects ’n stuff.
+%
+
+/ObjectTemplate dictbegin % All objects have these fields:
+  /parentDict null def % link to my parent dict; stops at null.
+  /parentDictArray null def % complete parent chain to Object!
+dictend def
+/ClassTemplate dictbegin % Class objects have these fields in addition:
+  /instanceVars null def % this class’ additional inst vars
+  /instanceVarDict null def % this class’ total inst vars
+  /instanceVarExtra 10 def % extra space for class var over-rides
+  /className null def % name of the class (as a keyword)
+  /subClasses nullarray def % subclass list (for browsing)
+dictend def
+
+% Create a sub-class of the given class.
+% The instancevariables may be either an array or a dict.
+% The advantage of using a dict is that the variables will be
+% pre-initialized to a value you chose, rather than "null".
+/classbegin { % classname superclass insvars => - (newclass on dict stack)
+dictbegin
+  ObjectTemplate {def} forall
+  ClassTemplate {def} forall
+
+  /instanceVars exch def
+  /parentDict exch def
+  /className exch def
+} def
+/classend { % - => classname newclass
+  currentdict {
+    dup xcheck {parentDict methodcompile def} {pop pop} ifelse
+  } forall
+
+  /instanceVarDict instanceVars def
+  /parentDictArray [] def
+
+  instanceVarDict type /arraytype eq {
+    /instanceVarDict instanceVarDict length dict dup begin
+      instanceVarDict {null def} forall
+    end def
+  } if
+
+  parentDict null ne {
+    parentDict /subClasses 2 copy get [className] [2 3 add] == append put
+    /instanceVarDict
+      parentDict /instanceVarDict get instanceVarDict append def
+    /parentDictArray
+      parentDict /parentDictArray get [parentDict] append def
+  } if
+
+  className
+dictend
+} def
+% Crack open the methods and fix for "super send" and "self send"
+/methodcompile { % method parentdict => newmethod
+10 dict begin
+  /superpending false def
+  /selfpending false def
+  /parentDict exch def
+  [ exch {
+      dup /send eq superpending selfpending or and {
+        pop pop
+        superpending
+          {parentDict /className get cvx /supersend cvx}
+          {cvx} ifelse
+      } if
+      dup type /arraytype eq {parentDict methodcompile} if
+
+      dup /super eq /superpending exch def
+      dup /self eq /selfpending exch def
+    } forall
+  ] cvx
+end
+} def
+
+% Generic Smalltalk-ish Primitives.
+% Send a message to an object.
+/send { % <args> message object => <results>
+  dup /parentDictArray get {begin} forall
+  begin
+    cvx exec
+  parentDictArray length 1 add {end} repeat
+} def
+% Send a message to super without poping myself.
+/supersend { % <args> keywordmessage superclass => <results>
+  exch { 2 copy known {exit} {exch /parentDict get exch} ifelse } loop
+  get exec
+} def
+% Put me on the operand stack.
+/self {/parentDict where pop} def
+
+% Your basic object!
+/Object null [] classbegin
+  /new { % class => instance
+    ObjectTemplate length instanceVarDict length instanceVarExtra
+    add add dict dup begin
+      instanceVarDict {def} forall
+      ObjectTemplate {def} forall
+    end
+    dup /parentDict currentdict put
+    dup /parentDictArray parentDictArray [currentdict] append put
+  } def
+  /doit { % proc ins => - (compile & execute the proc)
+    parentDict /parentDict get methodcompile exec
+  } def
+
+  /set { % {/key value ...} => - stores the values in the object
+    mark exch cvx exec
+    counttomark 2 div {def} repeat pop % store??
+  } def
+classend def
