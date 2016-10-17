@@ -4,18 +4,37 @@
 %%% Licensed under the GPLv3+ license.
 %%% http://www.fsf.org/licensing/licenses/gpl.html
 
-currentdict/systemdict currentdict put
-systemdict/{/mark cvx put
-systemdict/[/mark cvx put
-systemdict/]
-/counttomark cvx
-/array cvx
-/astore cvx
-/exch cvx
-/pop cvx
+currentdict /systemdict
+  currentdict
+put
+
+systemdict /{
+  /mark cvx
+put
+
+systemdict /[
+  /mark cvx
+put
+
+systemdict /]
+  /counttomark cvx
+  /array cvx
+  /astore cvx
+  /exch cvx
+  /pop cvx
 5 array astore cvx put
-systemdict/}/] cvx/cvx cvx 2 array astore cvx put
-systemdict/def{currentdict 2 index 2 index put pop pop}put
+
+systemdict /}
+  /] cvx
+  /cvx cvx
+2 array astore cvx put
+
+systemdict /def {
+  currentdict 2 index
+    2 index
+  put
+  pop pop
+} put
 
 /maxlength 1000 def % TODO
 /.bdef{bind def}bind def
@@ -37,6 +56,12 @@ systemdict/def{currentdict 2 index 2 index put pop pop}put
 /le{1 index 1 index eq 3 1 roll lt or}.bdef
 /gt{le not}.bdef
 /.repeat{1 1 4 2 roll for}.bdef
+
+%% stuff added to support oop.ps
+/dictbegin{1000 dict begin}.bdef
+/dictend{currentdict end}.bdef
+/nullarray{0 array}.bdef
+/append{1 index null eq {exch pop []} if {exch (push)1 .call} forall}.bdef
 
 %% math
 

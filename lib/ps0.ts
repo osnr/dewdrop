@@ -138,12 +138,13 @@ export class Ps0 {
     if (isSymbol(X) && !isQuoted(X)) { // executable name
       var D = inDs(this.Ds, X);
       if(!D) {
+        debugger;
         throw new Error("bind error '" + X + "'");
       }
       this.Es.push([false, D[X]]);
 
     } else if (Z && isArray(X) && isQuoted(X)) { // proc from Es
-      if(0 < X.length) {
+      if (0 < X.length) {
         var F = X[0];
         var R = quote(X.slice(1));
         if(0 < R.length) this.Es.push([false, R]);
@@ -167,8 +168,9 @@ export class Ps0 {
     var C = this.Es.pop();
     var L = C.shift(); // TODO use for 'exit'
     var X = C.pop();
-    for(var I = 0; I < C.length; I++)
+    for(var I = 0; I < C.length; I++) {
       this.Os.push(C[I]);
+    }
     await this.run(X, true);
   }
 
@@ -178,12 +180,16 @@ export class Ps0 {
       var T = this.PsP.token();
       if (T || T === 0) {
         this.Os.push(T);
-        if(this.PsP.D <= 0 || isSymbol(T) &&
-           (member(symbolName(T), "[]{}") ||
-            "<<" == symbolName(T) || ">>" == symbolName(T))) {
+        // If not inside a procedure {} block, then run everything right away.
+        // If inside a procedure, then only run the procedure brackets.
+        if (this.PsP.D <= 0 ||
+             (isSymbol(T) &&
+               (member(symbolName(T), "{}") ||
+                "<<" == symbolName(T) || ">>" == symbolName(T)))) {
           await this.exec();
-          while(0 < this.Es.length)
+          while(0 < this.Es.length) {
             await this.step();
+          }
         }
       }
     }

@@ -1,7 +1,7 @@
 import { Ps0 } from './ps0';
 import { Symbol, quote, unquote, inDs, isSymbol, isArray, isObject, isQuoted } from './util';
 
-export function StdlibMixin(Ps: Ps0, log: Function = console.log.bind(console)) {
+export function CorelibMixin(Ps: Ps0, log: Function = console.log.bind(console)) {
   var Sd = {};
   Ps.Ds.push(Sd);
 
@@ -149,22 +149,26 @@ export function StdlibMixin(Ps: Ps0, log: Function = console.log.bind(console)) 
       this.Os.push(0);
       this.Os.push(O);
       this.Os.push(B);
-      XforallA();
+      XforallA.call(this); // FIXME: Explicit .call(this) is ugly.
     } else if(isObject(O)) {
       var L = [];
       for(var K in O) {L.push(K);}
       this.Os.push(L);
       this.Os.push(O);
       this.Os.push(B);
-      XforallO();
+      XforallO.call(this);
     } else if("string" == typeof O) {
       this.Os.push(0);
       this.Os.push(O.split(""));
       this.Os.push(B);
-      XforallA();
+      XforallA.call(this);
     } else throw "Cannot apply forall to " + O;
   });
   def("exec", function() {this.Es.push([false, this.Os.pop()]);});
+  def("xcheck", function() {
+    const X = this.Os.pop();
+    this.Os.push((isSymbol(X) && !isQuoted(X)) || (isArray(X) && isQuoted(X)));
+  });
   def("cvx", function() {
     var X = this.Os.pop();
     if(isSymbol(X) && isQuoted(X)) this.Os.push(unquote(X)); // executable name
@@ -277,9 +281,8 @@ export function StdlibMixin(Ps: Ps0, log: Function = console.log.bind(console)) 
   // debugging
   def("=", function() {var X = this.Os.pop(); alert(X);}); // TODO
   def("==", function() {log(this.Os.pop());}); // TODO
-  def("stack", function() {log(this.Os);}); // TODO
-  def("pstack", function() {log(this.Os);}); // TODO
-  def("wtf", function() {log(this.Os.length);}); // FIXME remove
+  def("stack", function() {log(JSON.stringify(this.Os));}); // TODO
+  def("pstack", function() {console.log(this.Os);}); // TODO
   // js ffi
   def(".call", function() {
     var N = this.Os.pop();

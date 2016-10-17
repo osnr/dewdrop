@@ -40,4 +40,10 @@ end sendevent
 killprocess
 `), []);
   });
+  it('reduces array', async function() {
+    assert.deepEqual(await run('{[2 3 add]} exec'), [[5]]);
+  });
+  // it('append', async function() {
+  //   assert.deepEqual(await run('[] [[1 2 3]] append'), [1, 2, 3]);
+  // });
 });
