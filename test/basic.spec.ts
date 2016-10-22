@@ -4,7 +4,7 @@ import { Symbol, quote } from '../lib/util';
 import * as assert from 'assert';
 
 describe('Basic interpreter tests', function() {
-  this.timeout(5000);
+  this.timeout(10000);
 
   async function run(ps: string): Promise<any[]> {
     const dewdrop = await Dewdrop();

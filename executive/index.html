@@ -52,6 +52,18 @@ erasepage
 } fork
 </code></pre>
 
+<h3>Other examples</h3>
+<p>
+  See
+  <a href="https://github.com/osnr/dewdrop/blob/master/test/basic.spec.ts">
+    basic tests
+  </a> (especially the Densmore OOP test), and
+  <a href="https://github.com/osnr/dewdrop/tree/master/examples">
+    examples
+  </a>.
+  Check out the <a href="../test/">live test page</a>.
+</p>
+
 <h2>References</h2>
 
 <ul>
@@ -60,6 +72,9 @@ erasepage
   <li><a href="http://bitsavers.trailing-edge.com/pdf/sun/NeWS/The_NeWS_Book_1989.pdf">The NeWS Book (1989)</a></li>
   <li><a href="http://paulbourke.net/dataformats/postscript/">PostScript Tutorial, Paul Bourke</a></li>
   <li><a href="http://www.math.ubc.ca/~cass/courses/ps.html">PostScript command summary</a></li>
+  <li><a href="https://ia802600.us.archive.org/5/items/pdfy-1U9Ry1_Qj0LPSR6e/monterey86.pdf">
+    Object Oriented Programming in NeWS, Owen Densmore (1986)
+  </a></li>
 </ul>
 
 <h2>About</h2>
@@ -77,7 +92,8 @@ erasepage
 </p>
 
 <p>
-  NeWS is a window system and UI/graphics API based on a superset of Adobe's PostScript
+  NeWS is a window system and UI/graphics API based on a superset of Adobe's
+  <a href="https://en.wikipedia.org/wiki/PostScript">PostScript</a>
   (a stack-based programming language made for printable graphics). NeWS adds interaction support, a UI
   toolkit, cooperative multitasking, and OOP on top of Adobe PostScript and its graphics model.
 </p>
@@ -85,9 +101,11 @@ erasepage
 <p>
   NeWS was developed in the 1980s at Sun Microsystems and
   originally named "SunDew." (Many of the people behind NeWS ended up building Java.)
-  NeWS was ahead of its time -- proponents argue it was technically superior
-  to the X Window System that outcompeted it -- and its design actually resembles that of the
-  modern Web. (will add more here...)
+  NeWS was ahead of its time --
+  <a href="https://groups.google.com/forum/#!msg/comp.sys.sun.apps/pWR9DUOEC3M/KceDQGHPB2IJ">
+    proponents argue it was technically superior to the MIT X Window System that outcompeted it
+  </a>
+  -- and its design actually resembles the modern Web. (will add more here...)
 </p>
 
 <p>
@@ -107,7 +125,7 @@ erasepage
 
 <p>
   Curiously, NeWS got to the same place as the modern Web,
-  but took a very different path (decades earlier).
+  but took a very different path, decades earlier.
   The argument the NeWS Book makes for the NeWS architecture is basically
   a *compression* argument.
 </p>
@@ -121,17 +139,17 @@ erasepage
 
 <p>
   One approach would be to stream full video of the screen from the server to
-  our desk. Steam can do this. But that's bandwidth-intensive and hard to pull off,
-  especially back in the 1980s.
+  our desk. Steam can do this. But that's bandwidth-intensive and hard to pull off
+  if you're back in the 1980s.
 </p>
 
 <p>
   Another approach, which is taken (in theory) by the X Window System when you
   do `ssh -X`, is to come up with a basic set of objects, like buttons and
-  text boxes, and have the server stream a display list of all the objects.
+  text boxes, and have the server stream a display list of all the objects to the client.
   If you do this, however, then your objects are frozen in stone and
   might not be what applications want to use -- what if they want to have a custom UI,
-  or what if your buttons just look ugly? -- and if an application
+  or what if your system button style just looks ugly? -- and if an application
   draws its own stuff, you end up streaming that custom stuff pixel by pixel
   anyway.
 </p>
@@ -139,7 +157,7 @@ erasepage
 <p>
   NeWS asks: why do we need to send flat lists at all,
   whether of pixels or of higher-level display
-  objects? Our desk has a full-fledged computer on it. Why not send a small *program*
+  objects? Our client is a full-fledged computer. Why not send a small *program*
   from the server to the client, and let that program draw whatever it wants on the client?
 </p>
 
