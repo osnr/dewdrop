@@ -1,5 +1,5 @@
 import { Ps0 } from './ps0';
-import { Symbol, quote, unquote, inDs, isSymbol, isArray, isObject, isQuoted } from './util';
+import { Symbol, symbolName, quote, unquote, inDs, isSymbol, isArray, isObject, isQuoted } from './util';
 
 export function CorelibMixin(Ps: Ps0, log: Function = console.log.bind(console)) {
   var Sd = {};
@@ -87,7 +87,16 @@ export function CorelibMixin(Ps: Ps0, log: Function = console.log.bind(console))
   });
   def("array", function() {this.Os.push(new Array(this.Os.pop()));});
   // conditionals
-  def("eq", function() {var Y = this.Os.pop(); var X = this.Os.pop(); this.Os.push(X == Y);});
+  def("eq", function() {
+    const Y = this.Os.pop();
+    const X = this.Os.pop();
+    // Hack so that /hello is equal to unquoted hello.
+    if (isSymbol(X) && isSymbol(Y)) {
+      this.Os.push(symbolName(X) === symbolName(Y));
+    } else {
+      this.Os.push(X == Y);
+    }
+  });
   def("lt", function() {var Y = this.Os.pop(); var X = this.Os.pop(); this.Os.push(X < Y);});
   // control
   def("ifelse", function() {
@@ -97,10 +106,10 @@ export function CorelibMixin(Ps: Ps0, log: Function = console.log.bind(console))
     this.Es.push([false, C === true ? P : N]);
   });
   def("repeat", function Xrepeat() { // TODO in ps
-    var B = this.Os.pop();
+    var proc = this.Os.pop();
     var N = this.Os.pop();
-    if(1 < N) this.Es.push([true, N - 1, B, Xrepeat]);
-    if(0 < N) this.Es.push([false, B]);
+    if(1 < N) this.Es.push([true, N - 1, proc, Xrepeat]);
+    if(0 < N) this.Es.push([false, proc]);
   });
   def("for", function Xfor() { // TODO in ps
     var B = this.Os.pop();
@@ -115,14 +124,10 @@ export function CorelibMixin(Ps: Ps0, log: Function = console.log.bind(console))
       if(J <= L) this.Es.push([false, J, B]);
     }
   });
-  def("loop", async function Xloop() {
-    const fn = this.Os.pop();
-    while (true) {
-      await this.run(fn, true);
-      while (0 < this.Es.length) {
-        await this.step();
-      }
-    }
+  def("loop", function Xloop() {
+    const proc = this.Os.pop();
+    this.Es.push([true, proc, Xloop]);
+    this.Es.push([false, proc]);
   });
   function XforallA() {
     var B = this.Os.pop();
@@ -163,6 +168,16 @@ export function CorelibMixin(Ps: Ps0, log: Function = console.log.bind(console))
       this.Os.push(B);
       XforallA.call(this);
     } else throw "Cannot apply forall to " + O;
+  });
+  def("exit", function() {
+    // Drop the innermost loop (the topmost item on the execution stack with
+    // loop flag being true).
+    const loopIdx = this.Es
+      .map((item, idx) => item[0] ? idx : null)
+      .filter(idx => idx != null)
+      .reverse()
+      [0];
+    this.Es.splice(loopIdx);
   });
   def("exec", function() {this.Es.push([false, this.Os.pop()]);});
   def("xcheck", function() {
@@ -281,7 +296,7 @@ export function CorelibMixin(Ps: Ps0, log: Function = console.log.bind(console))
   // debugging
   def("=", function() {var X = this.Os.pop(); alert(X);}); // TODO
   def("==", function() {log(this.Os.pop());}); // TODO
-  def("stack", function() {log(JSON.stringify(this.Os));}); // TODO
+  def("stack", function() {log(this.Os);}); // TODO
   def("pstack", function() {console.log(this.Os);}); // TODO
   // js ffi
   def(".call", function() {
@@ -290,9 +305,9 @@ export function CorelibMixin(Ps: Ps0, log: Function = console.log.bind(console))
     var D = this.Os.pop();
     var X = [];
     for(var I = 0; I < N; I++) X.unshift(this.Os.pop());
-    // debugger;
     this.Os.push(D[K].apply(D, X));
   });
+  def(".debugger", function() {debugger;});
   def(".math", function() {this.Os.push(Math);});
   def(".date", function() {this.Os.push(new Date());}); // TODO split new and Date
   def(".window", function() {this.Os.push(window);});
@@ -303,6 +318,9 @@ export function CorelibMixin(Ps: Ps0, log: Function = console.log.bind(console))
       while(0 < this.Es.length)
         Ps.step();
     });
+  });
+  def(".error", function() {
+    throw new Error('Error thrown from inside program.');
   });
   // html5
   def(".minv", function() { // TODO in ps

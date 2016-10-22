@@ -45,7 +45,7 @@ dictbegin
   } if
 
   parentDict null ne {
-    parentDict /subClasses 2 copy get [className] [2 3 add] == append put
+    parentDict /subClasses 2 copy get [className] append put
     /instanceVarDict
       parentDict /instanceVarDict get instanceVarDict append def
     /parentDictArray

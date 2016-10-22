@@ -38,9 +38,7 @@ export default async function Dewdrop(framebuffer?: HTMLCanvasElement, log?: Fun
   }
 
   await dewdrop.parse(wpsLib);
-  if (framebuffer) {
-    await dewdrop.parse(oopLib);
-  }
+  await dewdrop.parse(oopLib); // TODO: Only really need this for NeWS.
 
   return dewdrop;
 }

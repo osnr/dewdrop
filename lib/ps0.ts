@@ -147,7 +147,9 @@ export class Ps0 {
       if (0 < X.length) {
         var F = X[0];
         var R = quote(X.slice(1));
-        if(0 < R.length) this.Es.push([false, R]);
+        if(0 < R.length) {
+          this.Es.push([false, R]);
+        }
         await this.run(F, false);
       }
 
@@ -166,7 +168,9 @@ export class Ps0 {
 
   async step() {
     var C = this.Es.pop();
-    var L = C.shift(); // TODO use for 'exit'
+    // This field is used for `exit`. TODO: Remove this useless lookup...
+    // am I doing it wrong by mutating Es in `exit` instead of checking here?
+    var L = C.shift();
     var X = C.pop();
     for(var I = 0; I < C.length; I++) {
       this.Os.push(C[I]);

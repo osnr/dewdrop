@@ -44,7 +44,7 @@ systemdict /def {
 /.ldef{load def}.bdef
 /if{{}ifelse}.bdef
 /cleartomark{array pop}.bdef
-/known{exch begin where{currentdict eq}{false}if end}.bdef
+/known{exch begin where{currentdict eq}{false}ifelse end}.bdef
 /store{1 index where{3 1 roll put}{def}ifelse}.bdef
 /not{{false}{true}ifelse}.bdef
 /.logand{{{true}{false}ifelse}{pop false}ifelse}.bdef
