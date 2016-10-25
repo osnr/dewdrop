@@ -11,7 +11,7 @@ import 'jq-console';
   const con = ($('#console')
     .appendTo(document.body)
     .css({
-      width: 500,
+      width: 640,
       height: 300,
       position: 'relative',
       background: 'whitesmoke'
@@ -20,7 +20,7 @@ import 'jq-console';
 
   const dewdrop = await Dewdrop(framebuffer, function log(arg) {
     console.log(arg);
-    con.Write(arg + '\n');
+    con.Write(arg + '\n', 'jqconsole-log');
   });
 
   (function startPrompt() {
@@ -28,7 +28,7 @@ import 'jq-console';
       try {
         await dewdrop.parse(input);
       } catch (e) {
-        con.Write(e + '\n');
+        con.Write(e + '\n', 'jqconsole-error');
       }
       startPrompt();
     });

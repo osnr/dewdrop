@@ -1,19 +1,36 @@
 <html>
 <head>
   <style>
+    body {
+      margin: 2em;
+      font: 16px 'Helvetica Neue';
+      line-height: 24px;
+      max-width: 700px;
+    }
     #framebuffer {
       background: gray;
     }
     .jqconsole-cursor {
       background-color: gray;
     }
+    .jqconsole-log {
+      color: darkslateblue;
+    }
+    .jqconsole-error {
+      color: darkred;
+    }
+    .jqconsole, pre {
+      font: 16px monospace;
+      line-height: 24px;
+    }
   </style>
+  <title>Dewdrop executive</title>
 </head>
 
 <body>
 
 <canvas id="framebuffer" width="640" height="480"></canvas>
-<div id="console"></div>
+<div style="width: 640px;" id="console"></div>
 
 <script src="../dist/executive.entry.js"></script>
 
@@ -56,28 +73,35 @@ erasepage
 <p>
   See
   <a href="https://github.com/osnr/dewdrop/blob/master/test/basic.spec.ts">
-    basic tests
-  </a> (especially the Densmore OOP test), and
+    basic tests</a> (especially the Densmore OOP test), and
   <a href="https://github.com/osnr/dewdrop/tree/master/examples">
-    examples
-  </a>.
+    examples</a>.
   Check out the <a href="../test/">live test page</a>.
 </p>
 
 <h2>References</h2>
 
 <ul>
-  <li><a href="https://en.wikipedia.org/wiki/NeWS">NeWS, Wikipedia</a></li>
-  <li><a href="https://medium.com/@slavapestov/yesterdays-news-c52f2be95205">Yesterday's NeWS, Slava Pestov</a></li>
-  <li><a href="http://bitsavers.trailing-edge.com/pdf/sun/NeWS/The_NeWS_Book_1989.pdf">The NeWS Book (1989)</a></li>
-  <li><a href="http://paulbourke.net/dataformats/postscript/">PostScript Tutorial, Paul Bourke</a></li>
-  <li><a href="http://www.math.ubc.ca/~cass/courses/ps.html">PostScript command summary</a></li>
+  <li><a href="https://en.wikipedia.org/wiki/NeWS">
+    NeWS, Wikipedia</a></li>
+  <li><a href="https://medium.com/@slavapestov/yesterdays-news-c52f2be95205">
+    Yesterday's NeWS, Slava Pestov</a></li>
+  <li><a href="http://bitsavers.trailing-edge.com/pdf/sun/NeWS/The_NeWS_Book_1989.pdf">
+    The NeWS Book (1989)</a></li>
+  <li><a href="http://paulbourke.net/dataformats/postscript/">
+    PostScript Tutorial, Paul Bourke</a></li>
+  <li><a href="http://www.math.ubc.ca/~cass/courses/ps.html">
+    PostScript command summary</a></li>
   <li><a href="https://ia802600.us.archive.org/5/items/pdfy-1U9Ry1_Qj0LPSR6e/monterey86.pdf">
-    Object Oriented Programming in NeWS, Owen Densmore (1986)
-  </a></li>
+    Object Oriented Programming in NeWS, Owen Densmore (1986)</a></li>
 </ul>
 
 <h2>About</h2>
+
+<blockquote>
+  PostScript is the future of words on paper.
+  <footer>&ndash; attributed to Arthur C. Clarke</footer>
+</blockquote>
 
 <p>
   Dewdrop is a work-in-progress reimplementation of Sun's
@@ -101,11 +125,11 @@ erasepage
 <p>
   NeWS was developed in the 1980s at Sun Microsystems and
   originally named "SunDew." (Many of the people behind NeWS ended up building Java.)
-  NeWS was ahead of its time --
+  NeWS was ahead of its time &ndash;
   <a href="https://groups.google.com/forum/#!msg/comp.sys.sun.apps/pWR9DUOEC3M/KceDQGHPB2IJ">
     proponents argue it was technically superior to the MIT X Window System that outcompeted it
   </a>
-  -- and its design actually resembles the modern Web. (will add more here...)
+  &ndash; and its design actually resembles the modern Web. (will add more here...)
 </p>
 
 <p>
